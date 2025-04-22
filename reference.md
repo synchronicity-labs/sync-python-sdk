@@ -1,6 +1,6 @@
 # Reference
 ## Generate
-<details><summary><code>client.generate.<a href="src/sync/generate/client.py">generate_controller_create_generation</a>(...)</code></summary>
+<details><summary><code>client.generate.<a href="src/sync/generate/client.py">create_generation</a>(...)</code></summary>
 <dl>
 <dd>
 
@@ -13,25 +13,25 @@
 <dd>
 
 ```python
-from sync import (
-    CreateGenerationDtoInputItem_Audio,
-    CreateGenerationDtoInputItem_Video,
-    Sync,
-)
+from sync import Sync
+from sync.common import Audio, GenerationOptions, Video
 
 client = Sync(
     api_key="YOUR_API_KEY",
 )
-client.generate.generate_controller_create_generation(
-    model="lipsync-2",
+client.generate.create_generation(
     input=[
-        CreateGenerationDtoInputItem_Video(
+        Video(
             url="https://synchlabs-public.s3.us-west-2.amazonaws.com/david_demo_shortvid-03a10044-7741-4cfc-816a-5bccd392d1ee.mp4",
         ),
-        CreateGenerationDtoInputItem_Audio(
+        Audio(
             url="https://synchlabs-public.s3.us-west-2.amazonaws.com/david_demo_shortaud-27623a4f-edab-4c6a-8383-871b18961a4a.wav",
         ),
     ],
+    model="lipsync-2",
+    options=GenerationOptions(
+        sync_mode="loop",
+    ),
 )
 
 ```
@@ -48,7 +48,7 @@ client.generate.generate_controller_create_generation(
 <dl>
 <dd>
 
-**model:** `CreateGenerationDtoModel` — name of the model to use for generation.
+**model:** `Model` — name of the model to use for generation.
     
 </dd>
 </dl>
@@ -56,7 +56,7 @@ client.generate.generate_controller_create_generation(
 <dl>
 <dd>
 
-**input:** `typing.Sequence[CreateGenerationDtoInputItem]` — Array of input objects. Must include one video input and either an audio or text input.
+**input:** `typing.Sequence[Input]` — Array of input objects. Must include one video input item and one audio input item. Audio input items can be provided as either: recorded/captured audio url or a text-to-speech input with tts provider configuration.
     
 </dd>
 </dl>
@@ -92,7 +92,7 @@ client.generate.generate_controller_create_generation(
 </dl>
 </details>
 
-<details><summary><code>client.generate.<a href="src/sync/generate/client.py">generate_controller_get_generation</a>(...)</code></summary>
+<details><summary><code>client.generate.<a href="src/sync/generate/client.py">get_generation</a>(...)</code></summary>
 <dl>
 <dd>
 
@@ -110,8 +110,8 @@ from sync import Sync
 client = Sync(
     api_key="YOUR_API_KEY",
 )
-client.generate.generate_controller_get_generation(
-    id="id",
+client.generate.get_generation(
+    id="6533643b-acbe-4c40-967e-d9ba9baac39e",
 )
 
 ```
@@ -128,7 +128,7 @@ client.generate.generate_controller_get_generation(
 <dl>
 <dd>
 
-**id:** `str` — Job ID
+**id:** `GenerationId` 
     
 </dd>
 </dl>
@@ -148,7 +148,7 @@ client.generate.generate_controller_get_generation(
 </dl>
 </details>
 
-<details><summary><code>client.generate.<a href="src/sync/generate/client.py">generate_controller_cancel_generation</a>(...)</code></summary>
+<details><summary><code>client.generate.<a href="src/sync/generate/client.py">list_generations</a>(...)</code></summary>
 <dl>
 <dd>
 
@@ -166,9 +166,7 @@ from sync import Sync
 client = Sync(
     api_key="YOUR_API_KEY",
 )
-client.generate.generate_controller_cancel_generation(
-    id="id",
-)
+client.generate.list_generations()
 
 ```
 </dd>
@@ -184,7 +182,7 @@ client.generate.generate_controller_cancel_generation(
 <dl>
 <dd>
 
-**id:** `str` — Job ID to cancel
+**status:** `typing.Optional[GenerationStatus]` — Filter generations by status
     
 </dd>
 </dl>
@@ -204,7 +202,7 @@ client.generate.generate_controller_cancel_generation(
 </dl>
 </details>
 
-<details><summary><code>client.generate.<a href="src/sync/generate/client.py">generate_controller_get_generations</a>(...)</code></summary>
+<details><summary><code>client.generate.<a href="src/sync/generate/client.py">estimate_cost</a>(...)</code></summary>
 <dl>
 <dd>
 
@@ -218,79 +216,24 @@ client.generate.generate_controller_cancel_generation(
 
 ```python
 from sync import Sync
+from sync.common import Audio, GenerationOptions, Video
 
 client = Sync(
     api_key="YOUR_API_KEY",
 )
-client.generate.generate_controller_get_generations()
-
-```
-</dd>
-</dl>
-</dd>
-</dl>
-
-#### ⚙️ Parameters
-
-<dl>
-<dd>
-
-<dl>
-<dd>
-
-**status:** `typing.Optional[str]` — Filter generations by status
-    
-</dd>
-</dl>
-
-<dl>
-<dd>
-
-**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
-    
-</dd>
-</dl>
-</dd>
-</dl>
-
-
-</dd>
-</dl>
-</details>
-
-## Analyze
-<details><summary><code>client.analyze.<a href="src/sync/analyze/client.py">analyze_controller_get_cost_estimate</a>(...)</code></summary>
-<dl>
-<dd>
-
-#### 🔌 Usage
-
-<dl>
-<dd>
-
-<dl>
-<dd>
-
-```python
-from sync import (
-    CreateGenerationDtoInputItem_Audio,
-    CreateGenerationDtoInputItem_Video,
-    Sync,
-)
-
-client = Sync(
-    api_key="YOUR_API_KEY",
-)
-client.analyze.analyze_controller_get_cost_estimate(
-    model="lipsync-2",
+client.generate.estimate_cost(
     input=[
-        CreateGenerationDtoInputItem_Video(
+        Video(
             url="https://synchlabs-public.s3.us-west-2.amazonaws.com/david_demo_shortvid-03a10044-7741-4cfc-816a-5bccd392d1ee.mp4",
         ),
-        CreateGenerationDtoInputItem_Audio(
+        Audio(
             url="https://synchlabs-public.s3.us-west-2.amazonaws.com/david_demo_shortaud-27623a4f-edab-4c6a-8383-871b18961a4a.wav",
         ),
     ],
+    model="lipsync-2",
+    options=GenerationOptions(
+        sync_mode="loop",
+    ),
 )
 
 ```
@@ -307,7 +250,7 @@ client.analyze.analyze_controller_get_cost_estimate(
 <dl>
 <dd>
 
-**model:** `CreateGenerationDtoModel` — name of the model to use for generation.
+**model:** `Model` — name of the model to use for generation.
     
 </dd>
 </dl>
@@ -315,7 +258,7 @@ client.analyze.analyze_controller_get_cost_estimate(
 <dl>
 <dd>
 
-**input:** `typing.Sequence[CreateGenerationDtoInputItem]` — Array of input objects. Must include one video input and either an audio or text input.
+**input:** `typing.Sequence[Input]` — Array of input objects. Must include one video input item and one audio input item. Audio input items can be provided as either: recorded/captured audio url or a text-to-speech input with tts provider configuration.
     
 </dd>
 </dl>
