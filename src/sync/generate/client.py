@@ -2,25 +2,17 @@
 
 import typing
 from ..core.client_wrapper import SyncClientWrapper
+from .raw_client import RawGenerateClient
 from ..common.types.model import Model
 from ..common.types.input import Input
 from ..common.types.generation_options import GenerationOptions
 from ..core.request_options import RequestOptions
 from ..common.types.generation import Generation
-from ..core.serialization import convert_and_respect_annotation_metadata
-from ..core.pydantic_utilities import parse_obj_as
-from ..common.errors.bad_request_error import BadRequestError
-from ..common.types.generation_error import GenerationError
-from ..common.errors.unauthorized_error import UnauthorizedError
-from ..common.errors.internal_server_error import InternalServerError
-from json.decoder import JSONDecodeError
-from ..core.api_error import ApiError
 from ..common.types.generation_id import GenerationId
-from ..core.jsonable_encoder import jsonable_encoder
-from ..common.errors.not_found_error import NotFoundError
 from ..common.types.generation_status import GenerationStatus
 from ..common.types.estimated_generation_cost import EstimatedGenerationCost
 from ..core.client_wrapper import AsyncClientWrapper
+from .raw_client import AsyncRawGenerateClient
 
 # this is used as the default value for optional parameters
 OMIT = typing.cast(typing.Any, ...)
@@ -28,7 +20,18 @@ OMIT = typing.cast(typing.Any, ...)
 
 class GenerateClient:
     def __init__(self, *, client_wrapper: SyncClientWrapper):
-        self._client_wrapper = client_wrapper
+        self._raw_client = RawGenerateClient(client_wrapper=client_wrapper)
+
+    @property
+    def with_raw_response(self) -> RawGenerateClient:
+        """
+        Retrieves a raw implementation of this client that returns raw responses.
+
+        Returns
+        -------
+        RawGenerateClient
+        """
+        return self._raw_client
 
     def create_generation(
         self,
@@ -85,65 +88,10 @@ class GenerateClient:
             ),
         )
         """
-        _response = self._client_wrapper.httpx_client.request(
-            "v2/generate",
-            method="POST",
-            json={
-                "model": model,
-                "input": convert_and_respect_annotation_metadata(
-                    object_=input, annotation=typing.Sequence[Input], direction="write"
-                ),
-                "options": convert_and_respect_annotation_metadata(
-                    object_=options, annotation=GenerationOptions, direction="write"
-                ),
-                "webhookUrl": webhook_url,
-            },
-            request_options=request_options,
-            omit=OMIT,
+        response = self._raw_client.create_generation(
+            model=model, input=input, options=options, webhook_url=webhook_url, request_options=request_options
         )
-        try:
-            if 200 <= _response.status_code < 300:
-                return typing.cast(
-                    Generation,
-                    parse_obj_as(
-                        type_=Generation,  # type: ignore
-                        object_=_response.json(),
-                    ),
-                )
-            if _response.status_code == 400:
-                raise BadRequestError(
-                    typing.cast(
-                        GenerationError,
-                        parse_obj_as(
-                            type_=GenerationError,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    )
-                )
-            if _response.status_code == 401:
-                raise UnauthorizedError(
-                    typing.cast(
-                        GenerationError,
-                        parse_obj_as(
-                            type_=GenerationError,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    )
-                )
-            if _response.status_code == 500:
-                raise InternalServerError(
-                    typing.cast(
-                        GenerationError,
-                        parse_obj_as(
-                            type_=GenerationError,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    )
-                )
-            _response_json = _response.json()
-        except JSONDecodeError:
-            raise ApiError(status_code=_response.status_code, body=_response.text)
-        raise ApiError(status_code=_response.status_code, body=_response_json)
+        return response.data
 
     def get_generation(
         self, id: GenerationId, *, request_options: typing.Optional[RequestOptions] = None
@@ -172,54 +120,8 @@ class GenerateClient:
             id="6533643b-acbe-4c40-967e-d9ba9baac39e",
         )
         """
-        _response = self._client_wrapper.httpx_client.request(
-            f"v2/generate/{jsonable_encoder(id)}",
-            method="GET",
-            request_options=request_options,
-        )
-        try:
-            if 200 <= _response.status_code < 300:
-                return typing.cast(
-                    Generation,
-                    parse_obj_as(
-                        type_=Generation,  # type: ignore
-                        object_=_response.json(),
-                    ),
-                )
-            if _response.status_code == 401:
-                raise UnauthorizedError(
-                    typing.cast(
-                        GenerationError,
-                        parse_obj_as(
-                            type_=GenerationError,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    )
-                )
-            if _response.status_code == 404:
-                raise NotFoundError(
-                    typing.cast(
-                        GenerationError,
-                        parse_obj_as(
-                            type_=GenerationError,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    )
-                )
-            if _response.status_code == 500:
-                raise InternalServerError(
-                    typing.cast(
-                        GenerationError,
-                        parse_obj_as(
-                            type_=GenerationError,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    )
-                )
-            _response_json = _response.json()
-        except JSONDecodeError:
-            raise ApiError(status_code=_response.status_code, body=_response.text)
-        raise ApiError(status_code=_response.status_code, body=_response_json)
+        response = self._raw_client.get_generation(id, request_options=request_options)
+        return response.data
 
     def list_generations(
         self,
@@ -250,47 +152,8 @@ class GenerateClient:
         )
         client.generate.list_generations()
         """
-        _response = self._client_wrapper.httpx_client.request(
-            "v2/generations",
-            method="GET",
-            params={
-                "status": status,
-            },
-            request_options=request_options,
-        )
-        try:
-            if 200 <= _response.status_code < 300:
-                return typing.cast(
-                    typing.List[Generation],
-                    parse_obj_as(
-                        type_=typing.List[Generation],  # type: ignore
-                        object_=_response.json(),
-                    ),
-                )
-            if _response.status_code == 401:
-                raise UnauthorizedError(
-                    typing.cast(
-                        GenerationError,
-                        parse_obj_as(
-                            type_=GenerationError,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    )
-                )
-            if _response.status_code == 500:
-                raise InternalServerError(
-                    typing.cast(
-                        GenerationError,
-                        parse_obj_as(
-                            type_=GenerationError,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    )
-                )
-            _response_json = _response.json()
-        except JSONDecodeError:
-            raise ApiError(status_code=_response.status_code, body=_response.text)
-        raise ApiError(status_code=_response.status_code, body=_response_json)
+        response = self._raw_client.list_generations(status=status, request_options=request_options)
+        return response.data
 
     def estimate_cost(
         self,
@@ -347,60 +210,26 @@ class GenerateClient:
             ),
         )
         """
-        _response = self._client_wrapper.httpx_client.request(
-            "v2/analyze/cost",
-            method="POST",
-            json={
-                "model": model,
-                "input": convert_and_respect_annotation_metadata(
-                    object_=input, annotation=typing.Sequence[Input], direction="write"
-                ),
-                "options": convert_and_respect_annotation_metadata(
-                    object_=options, annotation=GenerationOptions, direction="write"
-                ),
-                "webhookUrl": webhook_url,
-            },
-            request_options=request_options,
-            omit=OMIT,
+        response = self._raw_client.estimate_cost(
+            model=model, input=input, options=options, webhook_url=webhook_url, request_options=request_options
         )
-        try:
-            if 200 <= _response.status_code < 300:
-                return typing.cast(
-                    typing.List[EstimatedGenerationCost],
-                    parse_obj_as(
-                        type_=typing.List[EstimatedGenerationCost],  # type: ignore
-                        object_=_response.json(),
-                    ),
-                )
-            if _response.status_code == 401:
-                raise UnauthorizedError(
-                    typing.cast(
-                        GenerationError,
-                        parse_obj_as(
-                            type_=GenerationError,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    )
-                )
-            if _response.status_code == 500:
-                raise InternalServerError(
-                    typing.cast(
-                        GenerationError,
-                        parse_obj_as(
-                            type_=GenerationError,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    )
-                )
-            _response_json = _response.json()
-        except JSONDecodeError:
-            raise ApiError(status_code=_response.status_code, body=_response.text)
-        raise ApiError(status_code=_response.status_code, body=_response_json)
+        return response.data
 
 
 class AsyncGenerateClient:
     def __init__(self, *, client_wrapper: AsyncClientWrapper):
-        self._client_wrapper = client_wrapper
+        self._raw_client = AsyncRawGenerateClient(client_wrapper=client_wrapper)
+
+    @property
+    def with_raw_response(self) -> AsyncRawGenerateClient:
+        """
+        Retrieves a raw implementation of this client that returns raw responses.
+
+        Returns
+        -------
+        AsyncRawGenerateClient
+        """
+        return self._raw_client
 
     async def create_generation(
         self,
@@ -465,65 +294,10 @@ class AsyncGenerateClient:
 
         asyncio.run(main())
         """
-        _response = await self._client_wrapper.httpx_client.request(
-            "v2/generate",
-            method="POST",
-            json={
-                "model": model,
-                "input": convert_and_respect_annotation_metadata(
-                    object_=input, annotation=typing.Sequence[Input], direction="write"
-                ),
-                "options": convert_and_respect_annotation_metadata(
-                    object_=options, annotation=GenerationOptions, direction="write"
-                ),
-                "webhookUrl": webhook_url,
-            },
-            request_options=request_options,
-            omit=OMIT,
+        response = await self._raw_client.create_generation(
+            model=model, input=input, options=options, webhook_url=webhook_url, request_options=request_options
         )
-        try:
-            if 200 <= _response.status_code < 300:
-                return typing.cast(
-                    Generation,
-                    parse_obj_as(
-                        type_=Generation,  # type: ignore
-                        object_=_response.json(),
-                    ),
-                )
-            if _response.status_code == 400:
-                raise BadRequestError(
-                    typing.cast(
-                        GenerationError,
-                        parse_obj_as(
-                            type_=GenerationError,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    )
-                )
-            if _response.status_code == 401:
-                raise UnauthorizedError(
-                    typing.cast(
-                        GenerationError,
-                        parse_obj_as(
-                            type_=GenerationError,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    )
-                )
-            if _response.status_code == 500:
-                raise InternalServerError(
-                    typing.cast(
-                        GenerationError,
-                        parse_obj_as(
-                            type_=GenerationError,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    )
-                )
-            _response_json = _response.json()
-        except JSONDecodeError:
-            raise ApiError(status_code=_response.status_code, body=_response.text)
-        raise ApiError(status_code=_response.status_code, body=_response_json)
+        return response.data
 
     async def get_generation(
         self, id: GenerationId, *, request_options: typing.Optional[RequestOptions] = None
@@ -560,54 +334,8 @@ class AsyncGenerateClient:
 
         asyncio.run(main())
         """
-        _response = await self._client_wrapper.httpx_client.request(
-            f"v2/generate/{jsonable_encoder(id)}",
-            method="GET",
-            request_options=request_options,
-        )
-        try:
-            if 200 <= _response.status_code < 300:
-                return typing.cast(
-                    Generation,
-                    parse_obj_as(
-                        type_=Generation,  # type: ignore
-                        object_=_response.json(),
-                    ),
-                )
-            if _response.status_code == 401:
-                raise UnauthorizedError(
-                    typing.cast(
-                        GenerationError,
-                        parse_obj_as(
-                            type_=GenerationError,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    )
-                )
-            if _response.status_code == 404:
-                raise NotFoundError(
-                    typing.cast(
-                        GenerationError,
-                        parse_obj_as(
-                            type_=GenerationError,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    )
-                )
-            if _response.status_code == 500:
-                raise InternalServerError(
-                    typing.cast(
-                        GenerationError,
-                        parse_obj_as(
-                            type_=GenerationError,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    )
-                )
-            _response_json = _response.json()
-        except JSONDecodeError:
-            raise ApiError(status_code=_response.status_code, body=_response.text)
-        raise ApiError(status_code=_response.status_code, body=_response_json)
+        response = await self._raw_client.get_generation(id, request_options=request_options)
+        return response.data
 
     async def list_generations(
         self,
@@ -646,47 +374,8 @@ class AsyncGenerateClient:
 
         asyncio.run(main())
         """
-        _response = await self._client_wrapper.httpx_client.request(
-            "v2/generations",
-            method="GET",
-            params={
-                "status": status,
-            },
-            request_options=request_options,
-        )
-        try:
-            if 200 <= _response.status_code < 300:
-                return typing.cast(
-                    typing.List[Generation],
-                    parse_obj_as(
-                        type_=typing.List[Generation],  # type: ignore
-                        object_=_response.json(),
-                    ),
-                )
-            if _response.status_code == 401:
-                raise UnauthorizedError(
-                    typing.cast(
-                        GenerationError,
-                        parse_obj_as(
-                            type_=GenerationError,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    )
-                )
-            if _response.status_code == 500:
-                raise InternalServerError(
-                    typing.cast(
-                        GenerationError,
-                        parse_obj_as(
-                            type_=GenerationError,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    )
-                )
-            _response_json = _response.json()
-        except JSONDecodeError:
-            raise ApiError(status_code=_response.status_code, body=_response.text)
-        raise ApiError(status_code=_response.status_code, body=_response_json)
+        response = await self._raw_client.list_generations(status=status, request_options=request_options)
+        return response.data
 
     async def estimate_cost(
         self,
@@ -751,52 +440,7 @@ class AsyncGenerateClient:
 
         asyncio.run(main())
         """
-        _response = await self._client_wrapper.httpx_client.request(
-            "v2/analyze/cost",
-            method="POST",
-            json={
-                "model": model,
-                "input": convert_and_respect_annotation_metadata(
-                    object_=input, annotation=typing.Sequence[Input], direction="write"
-                ),
-                "options": convert_and_respect_annotation_metadata(
-                    object_=options, annotation=GenerationOptions, direction="write"
-                ),
-                "webhookUrl": webhook_url,
-            },
-            request_options=request_options,
-            omit=OMIT,
+        response = await self._raw_client.estimate_cost(
+            model=model, input=input, options=options, webhook_url=webhook_url, request_options=request_options
         )
-        try:
-            if 200 <= _response.status_code < 300:
-                return typing.cast(
-                    typing.List[EstimatedGenerationCost],
-                    parse_obj_as(
-                        type_=typing.List[EstimatedGenerationCost],  # type: ignore
-                        object_=_response.json(),
-                    ),
-                )
-            if _response.status_code == 401:
-                raise UnauthorizedError(
-                    typing.cast(
-                        GenerationError,
-                        parse_obj_as(
-                            type_=GenerationError,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    )
-                )
-            if _response.status_code == 500:
-                raise InternalServerError(
-                    typing.cast(
-                        GenerationError,
-                        parse_obj_as(
-                            type_=GenerationError,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    )
-                )
-            _response_json = _response.json()
-        except JSONDecodeError:
-            raise ApiError(status_code=_response.status_code, body=_response.text)
-        raise ApiError(status_code=_response.status_code, body=_response_json)
+        return response.data

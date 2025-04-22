@@ -15,34 +15,6 @@ from ...core.pydantic_utilities import IS_PYDANTIC_V2
 
 
 class GenerationNotification(UniversalBaseModel):
-    """
-    Examples
-    --------
-    import datetime
-
-    from sync.common import Audio, GenerationOptions
-    from sync.webhooks import GenerationNotification
-
-    GenerationNotification(
-        status="COMPLETED",
-        created_at=datetime.datetime.fromisoformat(
-            "2024-01-10 12:00:00+00:00",
-        ),
-        id="asdas12312ada",
-        input=[
-            Audio(
-                url="https://example.com/audio.mp3",
-            )
-        ],
-        model="lipsync-2",
-        error="",
-        options=GenerationOptions(),
-        output_duration=10.0,
-        output_url="https://example.com/output.mp4",
-        webhook_url="https://example.com/webhook",
-    )
-    """
-
     status: WebhookStatus = pydantic.Field()
     """
     The status of the generation
