@@ -2,21 +2,24 @@
 
 import typing
 from ..core.client_wrapper import SyncClientWrapper
-from ..types.create_generation_dto_model import CreateGenerationDtoModel
-from ..types.create_generation_dto_input_item import CreateGenerationDtoInputItem
-from ..types.generation_options import GenerationOptions
+from ..common.types.model import Model
+from ..common.types.input import Input
+from ..common.types.generation_options import GenerationOptions
 from ..core.request_options import RequestOptions
-from ..types.generation import Generation
+from ..common.types.generation import Generation
 from ..core.serialization import convert_and_respect_annotation_metadata
 from ..core.pydantic_utilities import parse_obj_as
-from ..errors.bad_request_error import BadRequestError
-from ..types.generation_error import GenerationError
-from ..errors.unauthorized_error import UnauthorizedError
-from ..errors.internal_server_error import InternalServerError
+from ..common.errors.bad_request_error import BadRequestError
+from ..common.types.generation_error import GenerationError
+from ..common.errors.unauthorized_error import UnauthorizedError
+from ..common.errors.internal_server_error import InternalServerError
 from json.decoder import JSONDecodeError
 from ..core.api_error import ApiError
+from ..common.types.generation_id import GenerationId
 from ..core.jsonable_encoder import jsonable_encoder
-from ..errors.not_found_error import NotFoundError
+from ..common.errors.not_found_error import NotFoundError
+from ..common.types.generation_status import GenerationStatus
+from ..common.types.estimated_generation_cost import EstimatedGenerationCost
 from ..core.client_wrapper import AsyncClientWrapper
 
 # this is used as the default value for optional parameters
@@ -27,11 +30,11 @@ class GenerateClient:
     def __init__(self, *, client_wrapper: SyncClientWrapper):
         self._client_wrapper = client_wrapper
 
-    def generate_controller_create_generation(
+    def create_generation(
         self,
         *,
-        model: CreateGenerationDtoModel,
-        input: typing.Sequence[CreateGenerationDtoInputItem],
+        model: Model,
+        input: typing.Sequence[Input],
         options: typing.Optional[GenerationOptions] = OMIT,
         webhook_url: typing.Optional[str] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
@@ -39,11 +42,11 @@ class GenerateClient:
         """
         Parameters
         ----------
-        model : CreateGenerationDtoModel
+        model : Model
             name of the model to use for generation.
 
-        input : typing.Sequence[CreateGenerationDtoInputItem]
-            Array of input objects. Must include one video input and either an audio or text input.
+        input : typing.Sequence[Input]
+            Array of input objects. Must include one video input item and one audio input item. Audio input items can be provided as either: recorded/captured audio url or a text-to-speech input with tts provider configuration.
 
         options : typing.Optional[GenerationOptions]
             additional options available for generation.
@@ -61,25 +64,25 @@ class GenerateClient:
 
         Examples
         --------
-        from sync import (
-            CreateGenerationDtoInputItem_Audio,
-            CreateGenerationDtoInputItem_Video,
-            Sync,
-        )
+        from sync import Sync
+        from sync.common import GenerationOptions, Input_Audio, Input_Video
 
         client = Sync(
             api_key="YOUR_API_KEY",
         )
-        client.generate.generate_controller_create_generation(
-            model="lipsync-2",
+        client.generate.create_generation(
             input=[
-                CreateGenerationDtoInputItem_Video(
+                Input_Video(
                     url="https://synchlabs-public.s3.us-west-2.amazonaws.com/david_demo_shortvid-03a10044-7741-4cfc-816a-5bccd392d1ee.mp4",
                 ),
-                CreateGenerationDtoInputItem_Audio(
+                Input_Audio(
                     url="https://synchlabs-public.s3.us-west-2.amazonaws.com/david_demo_shortaud-27623a4f-edab-4c6a-8383-871b18961a4a.wav",
                 ),
             ],
+            model="lipsync-2",
+            options=GenerationOptions(
+                sync_mode="loop",
+            ),
         )
         """
         _response = self._client_wrapper.httpx_client.request(
@@ -88,7 +91,7 @@ class GenerateClient:
             json={
                 "model": model,
                 "input": convert_and_respect_annotation_metadata(
-                    object_=input, annotation=typing.Sequence[CreateGenerationDtoInputItem], direction="write"
+                    object_=input, annotation=typing.Sequence[Input], direction="write"
                 ),
                 "options": convert_and_respect_annotation_metadata(
                     object_=options, annotation=GenerationOptions, direction="write"
@@ -142,14 +145,13 @@ class GenerateClient:
             raise ApiError(status_code=_response.status_code, body=_response.text)
         raise ApiError(status_code=_response.status_code, body=_response_json)
 
-    def generate_controller_get_generation(
-        self, id: str, *, request_options: typing.Optional[RequestOptions] = None
+    def get_generation(
+        self, id: GenerationId, *, request_options: typing.Optional[RequestOptions] = None
     ) -> Generation:
         """
         Parameters
         ----------
-        id : str
-            Job ID
+        id : GenerationId
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -166,8 +168,8 @@ class GenerateClient:
         client = Sync(
             api_key="YOUR_API_KEY",
         )
-        client.generate.generate_controller_get_generation(
-            id="id",
+        client.generate.get_generation(
+            id="6533643b-acbe-4c40-967e-d9ba9baac39e",
         )
         """
         _response = self._client_wrapper.httpx_client.request(
@@ -219,22 +221,25 @@ class GenerateClient:
             raise ApiError(status_code=_response.status_code, body=_response.text)
         raise ApiError(status_code=_response.status_code, body=_response_json)
 
-    def generate_controller_cancel_generation(
-        self, id: str, *, request_options: typing.Optional[RequestOptions] = None
-    ) -> Generation:
+    def list_generations(
+        self,
+        *,
+        status: typing.Optional[GenerationStatus] = None,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> typing.List[Generation]:
         """
         Parameters
         ----------
-        id : str
-            Job ID to cancel
+        status : typing.Optional[GenerationStatus]
+            Filter generations by status
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
 
         Returns
         -------
-        Generation
-            Job canceled successfully
+        typing.List[Generation]
+            Generations retrieved successfully
 
         Examples
         --------
@@ -243,46 +248,27 @@ class GenerateClient:
         client = Sync(
             api_key="YOUR_API_KEY",
         )
-        client.generate.generate_controller_cancel_generation(
-            id="id",
-        )
+        client.generate.list_generations()
         """
         _response = self._client_wrapper.httpx_client.request(
-            f"v2/generate/{jsonable_encoder(id)}/cancel",
-            method="POST",
+            "v2/generations",
+            method="GET",
+            params={
+                "status": status,
+            },
             request_options=request_options,
         )
         try:
             if 200 <= _response.status_code < 300:
                 return typing.cast(
-                    Generation,
+                    typing.List[Generation],
                     parse_obj_as(
-                        type_=Generation,  # type: ignore
+                        type_=typing.List[Generation],  # type: ignore
                         object_=_response.json(),
                     ),
                 )
-            if _response.status_code == 400:
-                raise BadRequestError(
-                    typing.cast(
-                        GenerationError,
-                        parse_obj_as(
-                            type_=GenerationError,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    )
-                )
             if _response.status_code == 401:
                 raise UnauthorizedError(
-                    typing.cast(
-                        GenerationError,
-                        parse_obj_as(
-                            type_=GenerationError,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    )
-                )
-            if _response.status_code == 404:
-                raise NotFoundError(
                     typing.cast(
                         GenerationError,
                         parse_obj_as(
@@ -306,46 +292,83 @@ class GenerateClient:
             raise ApiError(status_code=_response.status_code, body=_response.text)
         raise ApiError(status_code=_response.status_code, body=_response_json)
 
-    def generate_controller_get_generations(
-        self, *, status: typing.Optional[str] = None, request_options: typing.Optional[RequestOptions] = None
-    ) -> typing.List[Generation]:
+    def estimate_cost(
+        self,
+        *,
+        model: Model,
+        input: typing.Sequence[Input],
+        options: typing.Optional[GenerationOptions] = OMIT,
+        webhook_url: typing.Optional[str] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> typing.List[EstimatedGenerationCost]:
         """
         Parameters
         ----------
-        status : typing.Optional[str]
-            Filter generations by status
+        model : Model
+            name of the model to use for generation.
+
+        input : typing.Sequence[Input]
+            Array of input objects. Must include one video input item and one audio input item. Audio input items can be provided as either: recorded/captured audio url or a text-to-speech input with tts provider configuration.
+
+        options : typing.Optional[GenerationOptions]
+            additional options available for generation.
+
+        webhook_url : typing.Optional[str]
+            webhook url for generation status updates. once the generation completes we will send a POST request to the webhook url with the generation data.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
 
         Returns
         -------
-        typing.List[Generation]
+        typing.List[EstimatedGenerationCost]
             Generations retrieved successfully
 
         Examples
         --------
         from sync import Sync
+        from sync.common import GenerationOptions, Input_Audio, Input_Video
 
         client = Sync(
             api_key="YOUR_API_KEY",
         )
-        client.generate.generate_controller_get_generations()
+        client.generate.estimate_cost(
+            input=[
+                Input_Video(
+                    url="https://synchlabs-public.s3.us-west-2.amazonaws.com/david_demo_shortvid-03a10044-7741-4cfc-816a-5bccd392d1ee.mp4",
+                ),
+                Input_Audio(
+                    url="https://synchlabs-public.s3.us-west-2.amazonaws.com/david_demo_shortaud-27623a4f-edab-4c6a-8383-871b18961a4a.wav",
+                ),
+            ],
+            model="lipsync-2",
+            options=GenerationOptions(
+                sync_mode="loop",
+            ),
+        )
         """
         _response = self._client_wrapper.httpx_client.request(
-            "v2/generations",
-            method="GET",
-            params={
-                "status": status,
+            "v2/analyze/cost",
+            method="POST",
+            json={
+                "model": model,
+                "input": convert_and_respect_annotation_metadata(
+                    object_=input, annotation=typing.Sequence[Input], direction="write"
+                ),
+                "options": convert_and_respect_annotation_metadata(
+                    object_=options, annotation=GenerationOptions, direction="write"
+                ),
+                "webhookUrl": webhook_url,
             },
             request_options=request_options,
+            omit=OMIT,
         )
         try:
             if 200 <= _response.status_code < 300:
                 return typing.cast(
-                    typing.List[Generation],
+                    typing.List[EstimatedGenerationCost],
                     parse_obj_as(
-                        type_=typing.List[Generation],  # type: ignore
+                        type_=typing.List[EstimatedGenerationCost],  # type: ignore
                         object_=_response.json(),
                     ),
                 )
@@ -379,11 +402,11 @@ class AsyncGenerateClient:
     def __init__(self, *, client_wrapper: AsyncClientWrapper):
         self._client_wrapper = client_wrapper
 
-    async def generate_controller_create_generation(
+    async def create_generation(
         self,
         *,
-        model: CreateGenerationDtoModel,
-        input: typing.Sequence[CreateGenerationDtoInputItem],
+        model: Model,
+        input: typing.Sequence[Input],
         options: typing.Optional[GenerationOptions] = OMIT,
         webhook_url: typing.Optional[str] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
@@ -391,11 +414,11 @@ class AsyncGenerateClient:
         """
         Parameters
         ----------
-        model : CreateGenerationDtoModel
+        model : Model
             name of the model to use for generation.
 
-        input : typing.Sequence[CreateGenerationDtoInputItem]
-            Array of input objects. Must include one video input and either an audio or text input.
+        input : typing.Sequence[Input]
+            Array of input objects. Must include one video input item and one audio input item. Audio input items can be provided as either: recorded/captured audio url or a text-to-speech input with tts provider configuration.
 
         options : typing.Optional[GenerationOptions]
             additional options available for generation.
@@ -415,11 +438,8 @@ class AsyncGenerateClient:
         --------
         import asyncio
 
-        from sync import (
-            AsyncSync,
-            CreateGenerationDtoInputItem_Audio,
-            CreateGenerationDtoInputItem_Video,
-        )
+        from sync import AsyncSync
+        from sync.common import GenerationOptions, Input_Audio, Input_Video
 
         client = AsyncSync(
             api_key="YOUR_API_KEY",
@@ -427,16 +447,19 @@ class AsyncGenerateClient:
 
 
         async def main() -> None:
-            await client.generate.generate_controller_create_generation(
-                model="lipsync-2",
+            await client.generate.create_generation(
                 input=[
-                    CreateGenerationDtoInputItem_Video(
+                    Input_Video(
                         url="https://synchlabs-public.s3.us-west-2.amazonaws.com/david_demo_shortvid-03a10044-7741-4cfc-816a-5bccd392d1ee.mp4",
                     ),
-                    CreateGenerationDtoInputItem_Audio(
+                    Input_Audio(
                         url="https://synchlabs-public.s3.us-west-2.amazonaws.com/david_demo_shortaud-27623a4f-edab-4c6a-8383-871b18961a4a.wav",
                     ),
                 ],
+                model="lipsync-2",
+                options=GenerationOptions(
+                    sync_mode="loop",
+                ),
             )
 
 
@@ -448,7 +471,7 @@ class AsyncGenerateClient:
             json={
                 "model": model,
                 "input": convert_and_respect_annotation_metadata(
-                    object_=input, annotation=typing.Sequence[CreateGenerationDtoInputItem], direction="write"
+                    object_=input, annotation=typing.Sequence[Input], direction="write"
                 ),
                 "options": convert_and_respect_annotation_metadata(
                     object_=options, annotation=GenerationOptions, direction="write"
@@ -502,14 +525,13 @@ class AsyncGenerateClient:
             raise ApiError(status_code=_response.status_code, body=_response.text)
         raise ApiError(status_code=_response.status_code, body=_response_json)
 
-    async def generate_controller_get_generation(
-        self, id: str, *, request_options: typing.Optional[RequestOptions] = None
+    async def get_generation(
+        self, id: GenerationId, *, request_options: typing.Optional[RequestOptions] = None
     ) -> Generation:
         """
         Parameters
         ----------
-        id : str
-            Job ID
+        id : GenerationId
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -531,8 +553,8 @@ class AsyncGenerateClient:
 
 
         async def main() -> None:
-            await client.generate.generate_controller_get_generation(
-                id="id",
+            await client.generate.get_generation(
+                id="6533643b-acbe-4c40-967e-d9ba9baac39e",
             )
 
 
@@ -587,22 +609,25 @@ class AsyncGenerateClient:
             raise ApiError(status_code=_response.status_code, body=_response.text)
         raise ApiError(status_code=_response.status_code, body=_response_json)
 
-    async def generate_controller_cancel_generation(
-        self, id: str, *, request_options: typing.Optional[RequestOptions] = None
-    ) -> Generation:
+    async def list_generations(
+        self,
+        *,
+        status: typing.Optional[GenerationStatus] = None,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> typing.List[Generation]:
         """
         Parameters
         ----------
-        id : str
-            Job ID to cancel
+        status : typing.Optional[GenerationStatus]
+            Filter generations by status
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
 
         Returns
         -------
-        Generation
-            Job canceled successfully
+        typing.List[Generation]
+            Generations retrieved successfully
 
         Examples
         --------
@@ -616,49 +641,30 @@ class AsyncGenerateClient:
 
 
         async def main() -> None:
-            await client.generate.generate_controller_cancel_generation(
-                id="id",
-            )
+            await client.generate.list_generations()
 
 
         asyncio.run(main())
         """
         _response = await self._client_wrapper.httpx_client.request(
-            f"v2/generate/{jsonable_encoder(id)}/cancel",
-            method="POST",
+            "v2/generations",
+            method="GET",
+            params={
+                "status": status,
+            },
             request_options=request_options,
         )
         try:
             if 200 <= _response.status_code < 300:
                 return typing.cast(
-                    Generation,
+                    typing.List[Generation],
                     parse_obj_as(
-                        type_=Generation,  # type: ignore
+                        type_=typing.List[Generation],  # type: ignore
                         object_=_response.json(),
                     ),
                 )
-            if _response.status_code == 400:
-                raise BadRequestError(
-                    typing.cast(
-                        GenerationError,
-                        parse_obj_as(
-                            type_=GenerationError,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    )
-                )
             if _response.status_code == 401:
                 raise UnauthorizedError(
-                    typing.cast(
-                        GenerationError,
-                        parse_obj_as(
-                            type_=GenerationError,  # type: ignore
-                            object_=_response.json(),
-                        ),
-                    )
-                )
-            if _response.status_code == 404:
-                raise NotFoundError(
                     typing.cast(
                         GenerationError,
                         parse_obj_as(
@@ -682,21 +688,36 @@ class AsyncGenerateClient:
             raise ApiError(status_code=_response.status_code, body=_response.text)
         raise ApiError(status_code=_response.status_code, body=_response_json)
 
-    async def generate_controller_get_generations(
-        self, *, status: typing.Optional[str] = None, request_options: typing.Optional[RequestOptions] = None
-    ) -> typing.List[Generation]:
+    async def estimate_cost(
+        self,
+        *,
+        model: Model,
+        input: typing.Sequence[Input],
+        options: typing.Optional[GenerationOptions] = OMIT,
+        webhook_url: typing.Optional[str] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> typing.List[EstimatedGenerationCost]:
         """
         Parameters
         ----------
-        status : typing.Optional[str]
-            Filter generations by status
+        model : Model
+            name of the model to use for generation.
+
+        input : typing.Sequence[Input]
+            Array of input objects. Must include one video input item and one audio input item. Audio input items can be provided as either: recorded/captured audio url or a text-to-speech input with tts provider configuration.
+
+        options : typing.Optional[GenerationOptions]
+            additional options available for generation.
+
+        webhook_url : typing.Optional[str]
+            webhook url for generation status updates. once the generation completes we will send a POST request to the webhook url with the generation data.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
 
         Returns
         -------
-        typing.List[Generation]
+        typing.List[EstimatedGenerationCost]
             Generations retrieved successfully
 
         Examples
@@ -704,6 +725,7 @@ class AsyncGenerateClient:
         import asyncio
 
         from sync import AsyncSync
+        from sync.common import GenerationOptions, Input_Audio, Input_Video
 
         client = AsyncSync(
             api_key="YOUR_API_KEY",
@@ -711,25 +733,46 @@ class AsyncGenerateClient:
 
 
         async def main() -> None:
-            await client.generate.generate_controller_get_generations()
+            await client.generate.estimate_cost(
+                input=[
+                    Input_Video(
+                        url="https://synchlabs-public.s3.us-west-2.amazonaws.com/david_demo_shortvid-03a10044-7741-4cfc-816a-5bccd392d1ee.mp4",
+                    ),
+                    Input_Audio(
+                        url="https://synchlabs-public.s3.us-west-2.amazonaws.com/david_demo_shortaud-27623a4f-edab-4c6a-8383-871b18961a4a.wav",
+                    ),
+                ],
+                model="lipsync-2",
+                options=GenerationOptions(
+                    sync_mode="loop",
+                ),
+            )
 
 
         asyncio.run(main())
         """
         _response = await self._client_wrapper.httpx_client.request(
-            "v2/generations",
-            method="GET",
-            params={
-                "status": status,
+            "v2/analyze/cost",
+            method="POST",
+            json={
+                "model": model,
+                "input": convert_and_respect_annotation_metadata(
+                    object_=input, annotation=typing.Sequence[Input], direction="write"
+                ),
+                "options": convert_and_respect_annotation_metadata(
+                    object_=options, annotation=GenerationOptions, direction="write"
+                ),
+                "webhookUrl": webhook_url,
             },
             request_options=request_options,
+            omit=OMIT,
         )
         try:
             if 200 <= _response.status_code < 300:
                 return typing.cast(
-                    typing.List[Generation],
+                    typing.List[EstimatedGenerationCost],
                     parse_obj_as(
-                        type_=typing.List[Generation],  # type: ignore
+                        type_=typing.List[EstimatedGenerationCost],  # type: ignore
                         object_=_response.json(),
                     ),
                 )
