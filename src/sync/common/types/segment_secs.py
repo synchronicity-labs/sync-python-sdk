@@ -2,4 +2,4 @@
 
 import typing
 
-SegmentSecs = typing.List[float]
+SegmentSecs = typing.List[typing.List[float]]

@@ -2,4 +2,4 @@
 
 import typing
 
-SegmentFrames = typing.List[int]
+SegmentFrames = typing.List[typing.List[int]]

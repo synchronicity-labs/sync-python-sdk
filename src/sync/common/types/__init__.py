@@ -2,6 +2,7 @@
 
 from .audio import Audio
 from .create_generation_dto import CreateGenerationDto
+from .eleven_labs import ElevenLabs
 from .estimated_generation_cost import EstimatedGenerationCost
 from .generation import Generation
 from .generation_error import GenerationError
@@ -21,6 +22,7 @@ from .video import Video
 __all__ = [
     "Audio",
     "CreateGenerationDto",
+    "ElevenLabs",
     "EstimatedGenerationCost",
     "Generation",
     "GenerationError",

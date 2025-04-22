@@ -3,6 +3,7 @@
 from .types import (
     Audio,
     CreateGenerationDto,
+    ElevenLabs,
     EstimatedGenerationCost,
     Generation,
     GenerationError,
@@ -25,6 +26,7 @@ __all__ = [
     "Audio",
     "BadRequestError",
     "CreateGenerationDto",
+    "ElevenLabs",
     "EstimatedGenerationCost",
     "Generation",
     "GenerationError",
