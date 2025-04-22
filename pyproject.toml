@@ -3,7 +3,7 @@ name = "syncsdk"
 
 [tool.poetry]
 name = "syncsdk"
-version = "0.0.2"
+version = "0.0.13"
 description = ""
 readme = "README.md"
 authors = []
@@ -31,7 +31,7 @@ packages = [
 ]
 
 [project.urls]
-Repository = 'https://github.com/fern-demo/sync-python-sdk'
+Repository = 'https://github.com/synchronicity-labs/sync-python-sdk'
 
 [tool.poetry.dependencies]
 python = "^3.8"

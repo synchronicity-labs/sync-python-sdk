@@ -5,10 +5,8 @@ from .environment import SyncEnvironment
 import httpx
 from .core.client_wrapper import SyncClientWrapper
 from .generate.client import GenerateClient
-from .analyze.client import AnalyzeClient
 from .core.client_wrapper import AsyncClientWrapper
 from .generate.client import AsyncGenerateClient
-from .analyze.client import AsyncAnalyzeClient
 
 
 class Sync:
@@ -72,7 +70,6 @@ class Sync:
             timeout=_defaulted_timeout,
         )
         self.generate = GenerateClient(client_wrapper=self._client_wrapper)
-        self.analyze = AnalyzeClient(client_wrapper=self._client_wrapper)
 
 
 class AsyncSync:
@@ -136,7 +133,6 @@ class AsyncSync:
             timeout=_defaulted_timeout,
         )
         self.generate = AsyncGenerateClient(client_wrapper=self._client_wrapper)
-        self.analyze = AsyncAnalyzeClient(client_wrapper=self._client_wrapper)
 
 
 def _get_base_url(*, base_url: typing.Optional[str] = None, environment: SyncEnvironment) -> str:

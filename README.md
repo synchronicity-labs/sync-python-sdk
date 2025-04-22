@@ -1,6 +1,6 @@
 # Sync Python Library
 
-[![fern shield](https://img.shields.io/badge/%F0%9F%8C%BF-Built%20with%20Fern-brightgreen)](https://buildwithfern.com?utm_source=github&utm_medium=github&utm_campaign=readme&utm_source=https%3A%2F%2Fgithub.com%2Ffern-demo%2Fsync-python-sdk)
+[![fern shield](https://img.shields.io/badge/%F0%9F%8C%BF-Built%20with%20Fern-brightgreen)](https://buildwithfern.com?utm_source=github&utm_medium=github&utm_campaign=readme&utm_source=https%3A%2F%2Fgithub.com%2Fsynchronicity-labs%2Fsync-python-sdk)
 [![pypi](https://img.shields.io/pypi/v/syncsdk)](https://pypi.python.org/pypi/syncsdk)
 
 The Sync Python library provides convenient access to the Sync API from Python.
@@ -20,25 +20,25 @@ A full reference for this library is available [here](./reference.md).
 Instantiate and use the client with the following:
 
 ```python
-from sync import (
-    CreateGenerationDtoInputItem_Audio,
-    CreateGenerationDtoInputItem_Video,
-    Sync,
-)
+from sync import Sync
+from sync.common import Audio, GenerationOptions, Video
 
 client = Sync(
     api_key="YOUR_API_KEY",
 )
-client.generate.generate_controller_create_generation(
-    model="lipsync-2",
+client.generate.create_generation(
     input=[
-        CreateGenerationDtoInputItem_Video(
+        Video(
             url="https://synchlabs-public.s3.us-west-2.amazonaws.com/david_demo_shortvid-03a10044-7741-4cfc-816a-5bccd392d1ee.mp4",
         ),
-        CreateGenerationDtoInputItem_Audio(
+        Audio(
             url="https://synchlabs-public.s3.us-west-2.amazonaws.com/david_demo_shortaud-27623a4f-edab-4c6a-8383-871b18961a4a.wav",
         ),
     ],
+    model="lipsync-2",
+    options=GenerationOptions(
+        sync_mode="loop",
+    ),
 )
 ```
 
@@ -49,11 +49,8 @@ The SDK also exports an `async` client so that you can make non-blocking calls t
 ```python
 import asyncio
 
-from sync import (
-    AsyncSync,
-    CreateGenerationDtoInputItem_Audio,
-    CreateGenerationDtoInputItem_Video,
-)
+from sync import AsyncSync
+from sync.common import Audio, GenerationOptions, Video
 
 client = AsyncSync(
     api_key="YOUR_API_KEY",
@@ -61,16 +58,19 @@ client = AsyncSync(
 
 
 async def main() -> None:
-    await client.generate.generate_controller_create_generation(
-        model="lipsync-2",
+    await client.generate.create_generation(
         input=[
-            CreateGenerationDtoInputItem_Video(
+            Video(
                 url="https://synchlabs-public.s3.us-west-2.amazonaws.com/david_demo_shortvid-03a10044-7741-4cfc-816a-5bccd392d1ee.mp4",
             ),
-            CreateGenerationDtoInputItem_Audio(
+            Audio(
                 url="https://synchlabs-public.s3.us-west-2.amazonaws.com/david_demo_shortaud-27623a4f-edab-4c6a-8383-871b18961a4a.wav",
             ),
         ],
+        model="lipsync-2",
+        options=GenerationOptions(
+            sync_mode="loop",
+        ),
     )
 
 
@@ -86,7 +86,7 @@ will be thrown.
 from sync.core.api_error import ApiError
 
 try:
-    client.generate.generate_controller_create_generation(...)
+    client.generate.create_generation(...)
 except ApiError as e:
     print(e.status_code)
     print(e.body)
@@ -109,7 +109,7 @@ A request is deemed retryable when any of the following HTTP status codes is ret
 Use the `max_retries` request option to configure this behavior.
 
 ```python
-client.generate.generate_controller_create_generation(..., request_options={
+client.generate.create_generation(..., request_options={
     "max_retries": 1
 })
 ```
@@ -129,7 +129,7 @@ client = Sync(
 
 
 # Override timeout for a specific method
-client.generate.generate_controller_create_generation(..., request_options={
+client.generate.create_generation(..., request_options={
     "timeout_in_seconds": 1
 })
 ```
