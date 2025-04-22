@@ -5,6 +5,10 @@
 
 The Sync Python library provides convenient access to the Sync API from Python.
 
+## Documentation
+
+API reference documentation is available [here](https://docs.sync.so/api-reference).
+
 ## Installation
 
 ```sh
