@@ -13,9 +13,39 @@ class GenerationOptions(UniversalBaseModel):
     lipsync mode when audio and video durations are out of sync. By default if the audio and video durations are out of sync and audio is longer than video, the video will loop. Otherwise, the video will be cut off at the end of the audio.
     """
 
+    temperature: typing.Optional[float] = pydantic.Field(default=None)
+    """
+    generation temperature randomness between 0 and 1. only works for lipsync-2 based models.
+    """
+
     active_speaker: typing.Optional[bool] = pydantic.Field(default=None)
     """
     Whether to detect active speaker and apply generation to them
+    """
+
+    pads: typing.Optional[typing.List[int]] = pydantic.Field(default=None)
+    """
+    number of frames to pad the video on each side
+    """
+
+    speedup: typing.Optional[int] = pydantic.Field(default=None)
+    """
+    speed up the video by this factor.
+    """
+
+    output_format: typing.Optional[str] = pydantic.Field(default=None)
+    """
+    output format of the generated video.
+    """
+
+    fps: typing.Optional[int] = pydantic.Field(default=None)
+    """
+    frames per second of the generated video.
+    """
+
+    output_resolution: typing.Optional[typing.List[int]] = pydantic.Field(default=None)
+    """
+    resolution of the generated video.
     """
 
     if IS_PYDANTIC_V2:
