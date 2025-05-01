@@ -7,7 +7,7 @@ The Sync Python library provides convenient access to the Sync API from Python.
 
 ## Documentation
 
-API reference documentation is available [here](https://docs.sync.so/api-reference).
+API reference documentation is available [here](https://sync.docs.buildwithfern.com/api-reference).
 
 ## Installation
 
@@ -30,7 +30,7 @@ from sync.common import Audio, GenerationOptions, Video
 client = Sync(
     api_key="YOUR_API_KEY",
 )
-client.generate.create_generation(
+client.generations.create(
     input=[
         Video(
             url="https://synchlabs-public.s3.us-west-2.amazonaws.com/david_demo_shortvid-03a10044-7741-4cfc-816a-5bccd392d1ee.mp4",
@@ -62,7 +62,7 @@ client = AsyncSync(
 
 
 async def main() -> None:
-    await client.generate.create_generation(
+    await client.generations.create(
         input=[
             Video(
                 url="https://synchlabs-public.s3.us-west-2.amazonaws.com/david_demo_shortvid-03a10044-7741-4cfc-816a-5bccd392d1ee.mp4",
@@ -90,7 +90,7 @@ will be thrown.
 from sync.core.api_error import ApiError
 
 try:
-    client.generate.create_generation(...)
+    client.generations.create(...)
 except ApiError as e:
     print(e.status_code)
     print(e.body)
@@ -113,7 +113,7 @@ A request is deemed retryable when any of the following HTTP status codes is ret
 Use the `max_retries` request option to configure this behavior.
 
 ```python
-client.generate.create_generation(..., request_options={
+client.generations.create(..., request_options={
     "max_retries": 1
 })
 ```
@@ -133,7 +133,7 @@ client = Sync(
 
 
 # Override timeout for a specific method
-client.generate.create_generation(..., request_options={
+client.generations.create(..., request_options={
     "timeout_in_seconds": 1
 })
 ```

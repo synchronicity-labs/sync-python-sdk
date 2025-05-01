@@ -2,7 +2,7 @@
 
 import typing
 from ..core.client_wrapper import SyncClientWrapper
-from .raw_client import RawGenerateClient
+from .raw_client import RawGenerationsClient
 from ..common.types.model import Model
 from ..common.types.input import Input
 from ..common.types.generation_options import GenerationOptions
@@ -12,28 +12,28 @@ from ..common.types.generation_id import GenerationId
 from ..common.types.generation_status import GenerationStatus
 from ..common.types.estimated_generation_cost import EstimatedGenerationCost
 from ..core.client_wrapper import AsyncClientWrapper
-from .raw_client import AsyncRawGenerateClient
+from .raw_client import AsyncRawGenerationsClient
 
 # this is used as the default value for optional parameters
 OMIT = typing.cast(typing.Any, ...)
 
 
-class GenerateClient:
+class GenerationsClient:
     def __init__(self, *, client_wrapper: SyncClientWrapper):
-        self._raw_client = RawGenerateClient(client_wrapper=client_wrapper)
+        self._raw_client = RawGenerationsClient(client_wrapper=client_wrapper)
 
     @property
-    def with_raw_response(self) -> RawGenerateClient:
+    def with_raw_response(self) -> RawGenerationsClient:
         """
         Retrieves a raw implementation of this client that returns raw responses.
 
         Returns
         -------
-        RawGenerateClient
+        RawGenerationsClient
         """
         return self._raw_client
 
-    def create_generation(
+    def create(
         self,
         *,
         model: Model,
@@ -73,7 +73,7 @@ class GenerateClient:
         client = Sync(
             api_key="YOUR_API_KEY",
         )
-        client.generate.create_generation(
+        client.generations.create(
             input=[
                 Video(
                     url="https://synchlabs-public.s3.us-west-2.amazonaws.com/david_demo_shortvid-03a10044-7741-4cfc-816a-5bccd392d1ee.mp4",
@@ -88,14 +88,12 @@ class GenerateClient:
             ),
         )
         """
-        response = self._raw_client.create_generation(
+        response = self._raw_client.create(
             model=model, input=input, options=options, webhook_url=webhook_url, request_options=request_options
         )
         return response.data
 
-    def get_generation(
-        self, id: GenerationId, *, request_options: typing.Optional[RequestOptions] = None
-    ) -> Generation:
+    def get(self, id: GenerationId, *, request_options: typing.Optional[RequestOptions] = None) -> Generation:
         """
         Parameters
         ----------
@@ -116,14 +114,14 @@ class GenerateClient:
         client = Sync(
             api_key="YOUR_API_KEY",
         )
-        client.generate.get_generation(
-            id="6533643b-acbe-4c40-967e-d9ba9baac39e",
+        client.generations.get(
+            id="6533643b-aceb-4c40-967e-d9ba9baac39e",
         )
         """
-        response = self._raw_client.get_generation(id, request_options=request_options)
+        response = self._raw_client.get(id, request_options=request_options)
         return response.data
 
-    def list_generations(
+    def list(
         self,
         *,
         status: typing.Optional[GenerationStatus] = None,
@@ -150,9 +148,9 @@ class GenerateClient:
         client = Sync(
             api_key="YOUR_API_KEY",
         )
-        client.generate.list_generations()
+        client.generations.list()
         """
-        response = self._raw_client.list_generations(status=status, request_options=request_options)
+        response = self._raw_client.list(status=status, request_options=request_options)
         return response.data
 
     def estimate_cost(
@@ -195,7 +193,7 @@ class GenerateClient:
         client = Sync(
             api_key="YOUR_API_KEY",
         )
-        client.generate.estimate_cost(
+        client.generations.estimate_cost(
             input=[
                 Video(
                     url="https://synchlabs-public.s3.us-west-2.amazonaws.com/david_demo_shortvid-03a10044-7741-4cfc-816a-5bccd392d1ee.mp4",
@@ -216,22 +214,22 @@ class GenerateClient:
         return response.data
 
 
-class AsyncGenerateClient:
+class AsyncGenerationsClient:
     def __init__(self, *, client_wrapper: AsyncClientWrapper):
-        self._raw_client = AsyncRawGenerateClient(client_wrapper=client_wrapper)
+        self._raw_client = AsyncRawGenerationsClient(client_wrapper=client_wrapper)
 
     @property
-    def with_raw_response(self) -> AsyncRawGenerateClient:
+    def with_raw_response(self) -> AsyncRawGenerationsClient:
         """
         Retrieves a raw implementation of this client that returns raw responses.
 
         Returns
         -------
-        AsyncRawGenerateClient
+        AsyncRawGenerationsClient
         """
         return self._raw_client
 
-    async def create_generation(
+    async def create(
         self,
         *,
         model: Model,
@@ -276,7 +274,7 @@ class AsyncGenerateClient:
 
 
         async def main() -> None:
-            await client.generate.create_generation(
+            await client.generations.create(
                 input=[
                     Video(
                         url="https://synchlabs-public.s3.us-west-2.amazonaws.com/david_demo_shortvid-03a10044-7741-4cfc-816a-5bccd392d1ee.mp4",
@@ -294,14 +292,12 @@ class AsyncGenerateClient:
 
         asyncio.run(main())
         """
-        response = await self._raw_client.create_generation(
+        response = await self._raw_client.create(
             model=model, input=input, options=options, webhook_url=webhook_url, request_options=request_options
         )
         return response.data
 
-    async def get_generation(
-        self, id: GenerationId, *, request_options: typing.Optional[RequestOptions] = None
-    ) -> Generation:
+    async def get(self, id: GenerationId, *, request_options: typing.Optional[RequestOptions] = None) -> Generation:
         """
         Parameters
         ----------
@@ -327,17 +323,17 @@ class AsyncGenerateClient:
 
 
         async def main() -> None:
-            await client.generate.get_generation(
-                id="6533643b-acbe-4c40-967e-d9ba9baac39e",
+            await client.generations.get(
+                id="6533643b-aceb-4c40-967e-d9ba9baac39e",
             )
 
 
         asyncio.run(main())
         """
-        response = await self._raw_client.get_generation(id, request_options=request_options)
+        response = await self._raw_client.get(id, request_options=request_options)
         return response.data
 
-    async def list_generations(
+    async def list(
         self,
         *,
         status: typing.Optional[GenerationStatus] = None,
@@ -369,12 +365,12 @@ class AsyncGenerateClient:
 
 
         async def main() -> None:
-            await client.generate.list_generations()
+            await client.generations.list()
 
 
         asyncio.run(main())
         """
-        response = await self._raw_client.list_generations(status=status, request_options=request_options)
+        response = await self._raw_client.list(status=status, request_options=request_options)
         return response.data
 
     async def estimate_cost(
@@ -422,7 +418,7 @@ class AsyncGenerateClient:
 
 
         async def main() -> None:
-            await client.generate.estimate_cost(
+            await client.generations.estimate_cost(
                 input=[
                     Video(
                         url="https://synchlabs-public.s3.us-west-2.amazonaws.com/david_demo_shortvid-03a10044-7741-4cfc-816a-5bccd392d1ee.mp4",

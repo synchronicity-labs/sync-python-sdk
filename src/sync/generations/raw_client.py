@@ -9,7 +9,7 @@ from ..core.request_options import RequestOptions
 from ..core.http_response import HttpResponse
 from ..common.types.generation import Generation
 from ..core.serialization import convert_and_respect_annotation_metadata
-from ..core.pydantic_utilities import parse_obj_as
+from ..core.unchecked_base_model import construct_type
 from ..common.errors.bad_request_error import BadRequestError
 from ..common.types.generation_error import GenerationError
 from ..common.errors.unauthorized_error import UnauthorizedError
@@ -28,11 +28,11 @@ from ..core.http_response import AsyncHttpResponse
 OMIT = typing.cast(typing.Any, ...)
 
 
-class RawGenerateClient:
+class RawGenerationsClient:
     def __init__(self, *, client_wrapper: SyncClientWrapper):
         self._client_wrapper = client_wrapper
 
-    def create_generation(
+    def create(
         self,
         *,
         model: Model,
@@ -84,7 +84,7 @@ class RawGenerateClient:
             if 200 <= _response.status_code < 300:
                 _data = typing.cast(
                     Generation,
-                    parse_obj_as(
+                    construct_type(
                         type_=Generation,  # type: ignore
                         object_=_response.json(),
                     ),
@@ -94,7 +94,7 @@ class RawGenerateClient:
                 raise BadRequestError(
                     typing.cast(
                         GenerationError,
-                        parse_obj_as(
+                        construct_type(
                             type_=GenerationError,  # type: ignore
                             object_=_response.json(),
                         ),
@@ -104,7 +104,7 @@ class RawGenerateClient:
                 raise UnauthorizedError(
                     typing.cast(
                         GenerationError,
-                        parse_obj_as(
+                        construct_type(
                             type_=GenerationError,  # type: ignore
                             object_=_response.json(),
                         ),
@@ -114,7 +114,7 @@ class RawGenerateClient:
                 raise InternalServerError(
                     typing.cast(
                         GenerationError,
-                        parse_obj_as(
+                        construct_type(
                             type_=GenerationError,  # type: ignore
                             object_=_response.json(),
                         ),
@@ -125,7 +125,7 @@ class RawGenerateClient:
             raise ApiError(status_code=_response.status_code, body=_response.text)
         raise ApiError(status_code=_response.status_code, body=_response_json)
 
-    def get_generation(
+    def get(
         self, id: GenerationId, *, request_options: typing.Optional[RequestOptions] = None
     ) -> HttpResponse[Generation]:
         """
@@ -150,7 +150,7 @@ class RawGenerateClient:
             if 200 <= _response.status_code < 300:
                 _data = typing.cast(
                     Generation,
-                    parse_obj_as(
+                    construct_type(
                         type_=Generation,  # type: ignore
                         object_=_response.json(),
                     ),
@@ -160,7 +160,7 @@ class RawGenerateClient:
                 raise UnauthorizedError(
                     typing.cast(
                         GenerationError,
-                        parse_obj_as(
+                        construct_type(
                             type_=GenerationError,  # type: ignore
                             object_=_response.json(),
                         ),
@@ -170,7 +170,7 @@ class RawGenerateClient:
                 raise NotFoundError(
                     typing.cast(
                         GenerationError,
-                        parse_obj_as(
+                        construct_type(
                             type_=GenerationError,  # type: ignore
                             object_=_response.json(),
                         ),
@@ -180,7 +180,7 @@ class RawGenerateClient:
                 raise InternalServerError(
                     typing.cast(
                         GenerationError,
-                        parse_obj_as(
+                        construct_type(
                             type_=GenerationError,  # type: ignore
                             object_=_response.json(),
                         ),
@@ -191,7 +191,7 @@ class RawGenerateClient:
             raise ApiError(status_code=_response.status_code, body=_response.text)
         raise ApiError(status_code=_response.status_code, body=_response_json)
 
-    def list_generations(
+    def list(
         self,
         *,
         status: typing.Optional[GenerationStatus] = None,
@@ -223,7 +223,7 @@ class RawGenerateClient:
             if 200 <= _response.status_code < 300:
                 _data = typing.cast(
                     typing.List[Generation],
-                    parse_obj_as(
+                    construct_type(
                         type_=typing.List[Generation],  # type: ignore
                         object_=_response.json(),
                     ),
@@ -233,7 +233,7 @@ class RawGenerateClient:
                 raise UnauthorizedError(
                     typing.cast(
                         GenerationError,
-                        parse_obj_as(
+                        construct_type(
                             type_=GenerationError,  # type: ignore
                             object_=_response.json(),
                         ),
@@ -243,7 +243,7 @@ class RawGenerateClient:
                 raise InternalServerError(
                     typing.cast(
                         GenerationError,
-                        parse_obj_as(
+                        construct_type(
                             type_=GenerationError,  # type: ignore
                             object_=_response.json(),
                         ),
@@ -306,7 +306,7 @@ class RawGenerateClient:
             if 200 <= _response.status_code < 300:
                 _data = typing.cast(
                     typing.List[EstimatedGenerationCost],
-                    parse_obj_as(
+                    construct_type(
                         type_=typing.List[EstimatedGenerationCost],  # type: ignore
                         object_=_response.json(),
                     ),
@@ -316,7 +316,7 @@ class RawGenerateClient:
                 raise UnauthorizedError(
                     typing.cast(
                         GenerationError,
-                        parse_obj_as(
+                        construct_type(
                             type_=GenerationError,  # type: ignore
                             object_=_response.json(),
                         ),
@@ -326,7 +326,7 @@ class RawGenerateClient:
                 raise InternalServerError(
                     typing.cast(
                         GenerationError,
-                        parse_obj_as(
+                        construct_type(
                             type_=GenerationError,  # type: ignore
                             object_=_response.json(),
                         ),
@@ -338,11 +338,11 @@ class RawGenerateClient:
         raise ApiError(status_code=_response.status_code, body=_response_json)
 
 
-class AsyncRawGenerateClient:
+class AsyncRawGenerationsClient:
     def __init__(self, *, client_wrapper: AsyncClientWrapper):
         self._client_wrapper = client_wrapper
 
-    async def create_generation(
+    async def create(
         self,
         *,
         model: Model,
@@ -394,7 +394,7 @@ class AsyncRawGenerateClient:
             if 200 <= _response.status_code < 300:
                 _data = typing.cast(
                     Generation,
-                    parse_obj_as(
+                    construct_type(
                         type_=Generation,  # type: ignore
                         object_=_response.json(),
                     ),
@@ -404,7 +404,7 @@ class AsyncRawGenerateClient:
                 raise BadRequestError(
                     typing.cast(
                         GenerationError,
-                        parse_obj_as(
+                        construct_type(
                             type_=GenerationError,  # type: ignore
                             object_=_response.json(),
                         ),
@@ -414,7 +414,7 @@ class AsyncRawGenerateClient:
                 raise UnauthorizedError(
                     typing.cast(
                         GenerationError,
-                        parse_obj_as(
+                        construct_type(
                             type_=GenerationError,  # type: ignore
                             object_=_response.json(),
                         ),
@@ -424,7 +424,7 @@ class AsyncRawGenerateClient:
                 raise InternalServerError(
                     typing.cast(
                         GenerationError,
-                        parse_obj_as(
+                        construct_type(
                             type_=GenerationError,  # type: ignore
                             object_=_response.json(),
                         ),
@@ -435,7 +435,7 @@ class AsyncRawGenerateClient:
             raise ApiError(status_code=_response.status_code, body=_response.text)
         raise ApiError(status_code=_response.status_code, body=_response_json)
 
-    async def get_generation(
+    async def get(
         self, id: GenerationId, *, request_options: typing.Optional[RequestOptions] = None
     ) -> AsyncHttpResponse[Generation]:
         """
@@ -460,7 +460,7 @@ class AsyncRawGenerateClient:
             if 200 <= _response.status_code < 300:
                 _data = typing.cast(
                     Generation,
-                    parse_obj_as(
+                    construct_type(
                         type_=Generation,  # type: ignore
                         object_=_response.json(),
                     ),
@@ -470,7 +470,7 @@ class AsyncRawGenerateClient:
                 raise UnauthorizedError(
                     typing.cast(
                         GenerationError,
-                        parse_obj_as(
+                        construct_type(
                             type_=GenerationError,  # type: ignore
                             object_=_response.json(),
                         ),
@@ -480,7 +480,7 @@ class AsyncRawGenerateClient:
                 raise NotFoundError(
                     typing.cast(
                         GenerationError,
-                        parse_obj_as(
+                        construct_type(
                             type_=GenerationError,  # type: ignore
                             object_=_response.json(),
                         ),
@@ -490,7 +490,7 @@ class AsyncRawGenerateClient:
                 raise InternalServerError(
                     typing.cast(
                         GenerationError,
-                        parse_obj_as(
+                        construct_type(
                             type_=GenerationError,  # type: ignore
                             object_=_response.json(),
                         ),
@@ -501,7 +501,7 @@ class AsyncRawGenerateClient:
             raise ApiError(status_code=_response.status_code, body=_response.text)
         raise ApiError(status_code=_response.status_code, body=_response_json)
 
-    async def list_generations(
+    async def list(
         self,
         *,
         status: typing.Optional[GenerationStatus] = None,
@@ -533,7 +533,7 @@ class AsyncRawGenerateClient:
             if 200 <= _response.status_code < 300:
                 _data = typing.cast(
                     typing.List[Generation],
-                    parse_obj_as(
+                    construct_type(
                         type_=typing.List[Generation],  # type: ignore
                         object_=_response.json(),
                     ),
@@ -543,7 +543,7 @@ class AsyncRawGenerateClient:
                 raise UnauthorizedError(
                     typing.cast(
                         GenerationError,
-                        parse_obj_as(
+                        construct_type(
                             type_=GenerationError,  # type: ignore
                             object_=_response.json(),
                         ),
@@ -553,7 +553,7 @@ class AsyncRawGenerateClient:
                 raise InternalServerError(
                     typing.cast(
                         GenerationError,
-                        parse_obj_as(
+                        construct_type(
                             type_=GenerationError,  # type: ignore
                             object_=_response.json(),
                         ),
@@ -616,7 +616,7 @@ class AsyncRawGenerateClient:
             if 200 <= _response.status_code < 300:
                 _data = typing.cast(
                     typing.List[EstimatedGenerationCost],
-                    parse_obj_as(
+                    construct_type(
                         type_=typing.List[EstimatedGenerationCost],  # type: ignore
                         object_=_response.json(),
                     ),
@@ -626,7 +626,7 @@ class AsyncRawGenerateClient:
                 raise UnauthorizedError(
                     typing.cast(
                         GenerationError,
-                        parse_obj_as(
+                        construct_type(
                             type_=GenerationError,  # type: ignore
                             object_=_response.json(),
                         ),
@@ -636,7 +636,7 @@ class AsyncRawGenerateClient:
                 raise InternalServerError(
                     typing.cast(
                         GenerationError,
-                        parse_obj_as(
+                        construct_type(
                             type_=GenerationError,  # type: ignore
                             object_=_response.json(),
                         ),

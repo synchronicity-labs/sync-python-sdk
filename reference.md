@@ -1,6 +1,6 @@
 # Reference
-## Generate
-<details><summary><code>client.generate.<a href="src/sync/generate/client.py">create_generation</a>(...)</code></summary>
+## Generations
+<details><summary><code>client.generations.<a href="src/sync/generations/client.py">create</a>(...)</code></summary>
 <dl>
 <dd>
 
@@ -19,7 +19,7 @@ from sync.common import Audio, GenerationOptions, Video
 client = Sync(
     api_key="YOUR_API_KEY",
 )
-client.generate.create_generation(
+client.generations.create(
     input=[
         Video(
             url="https://synchlabs-public.s3.us-west-2.amazonaws.com/david_demo_shortvid-03a10044-7741-4cfc-816a-5bccd392d1ee.mp4",
@@ -92,7 +92,7 @@ client.generate.create_generation(
 </dl>
 </details>
 
-<details><summary><code>client.generate.<a href="src/sync/generate/client.py">get_generation</a>(...)</code></summary>
+<details><summary><code>client.generations.<a href="src/sync/generations/client.py">get</a>(...)</code></summary>
 <dl>
 <dd>
 
@@ -110,8 +110,8 @@ from sync import Sync
 client = Sync(
     api_key="YOUR_API_KEY",
 )
-client.generate.get_generation(
-    id="6533643b-acbe-4c40-967e-d9ba9baac39e",
+client.generations.get(
+    id="6533643b-aceb-4c40-967e-d9ba9baac39e",
 )
 
 ```
@@ -148,7 +148,7 @@ client.generate.get_generation(
 </dl>
 </details>
 
-<details><summary><code>client.generate.<a href="src/sync/generate/client.py">list_generations</a>(...)</code></summary>
+<details><summary><code>client.generations.<a href="src/sync/generations/client.py">list</a>(...)</code></summary>
 <dl>
 <dd>
 
@@ -166,7 +166,7 @@ from sync import Sync
 client = Sync(
     api_key="YOUR_API_KEY",
 )
-client.generate.list_generations()
+client.generations.list()
 
 ```
 </dd>
@@ -202,7 +202,7 @@ client.generate.list_generations()
 </dl>
 </details>
 
-<details><summary><code>client.generate.<a href="src/sync/generate/client.py">estimate_cost</a>(...)</code></summary>
+<details><summary><code>client.generations.<a href="src/sync/generations/client.py">estimate_cost</a>(...)</code></summary>
 <dl>
 <dd>
 
@@ -221,7 +221,7 @@ from sync.common import Audio, GenerationOptions, Video
 client = Sync(
     api_key="YOUR_API_KEY",
 )
-client.generate.estimate_cost(
+client.generations.estimate_cost(
     input=[
         Video(
             url="https://synchlabs-public.s3.us-west-2.amazonaws.com/david_demo_shortvid-03a10044-7741-4cfc-816a-5bccd392d1ee.mp4",

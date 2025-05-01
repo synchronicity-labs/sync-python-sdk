@@ -4,9 +4,9 @@ import typing
 from .environment import SyncEnvironment
 import httpx
 from .core.client_wrapper import SyncClientWrapper
-from .generate.client import GenerateClient
+from .generations.client import GenerationsClient
 from .core.client_wrapper import AsyncClientWrapper
-from .generate.client import AsyncGenerateClient
+from .generations.client import AsyncGenerationsClient
 
 
 class Sync:
@@ -69,7 +69,7 @@ class Sync:
             else httpx.Client(timeout=_defaulted_timeout),
             timeout=_defaulted_timeout,
         )
-        self.generate = GenerateClient(client_wrapper=self._client_wrapper)
+        self.generations = GenerationsClient(client_wrapper=self._client_wrapper)
 
 
 class AsyncSync:
@@ -132,7 +132,7 @@ class AsyncSync:
             else httpx.AsyncClient(timeout=_defaulted_timeout),
             timeout=_defaulted_timeout,
         )
-        self.generate = AsyncGenerateClient(client_wrapper=self._client_wrapper)
+        self.generations = AsyncGenerationsClient(client_wrapper=self._client_wrapper)
 
 
 def _get_base_url(*, base_url: typing.Optional[str] = None, environment: SyncEnvironment) -> str:
