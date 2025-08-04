@@ -7,7 +7,7 @@ The Sync Python library provides convenient access to the Sync API from Python.
 
 ## Documentation
 
-API reference documentation is available [here](https://sync.docs.buildwithfern.com/api-reference).
+API reference documentation is available [here](https://docs.sync.so/api-reference).
 
 ## Installation
 
@@ -17,7 +17,7 @@ pip install syncsdk
 
 ## Reference
 
-A full reference for this library is available [here](https://github.com/synchronicity-labs/sync-python-sdk/blob/HEAD/./reference.md).
+A full reference for this library is available [here](./reference.md).
 
 ## Usage
 
@@ -25,12 +25,24 @@ Instantiate and use the client with the following:
 
 ```python
 from sync import Sync
+from sync.common import Audio, GenerationOptions, Video
 
 client = Sync(
     api_key="YOUR_API_KEY",
 )
-client.batch.create(
-    dry_run=True,
+client.generations.create(
+    input=[
+        Video(
+            url="https://assets.sync.so/docs/example-video.mp4",
+        ),
+        Audio(
+            url="https://assets.sync.so/docs/example-audio.wav",
+        ),
+    ],
+    model="lipsync-2",
+    options=GenerationOptions(
+        sync_mode="loop",
+    ),
 )
 ```
 
@@ -42,6 +54,7 @@ The SDK also exports an `async` client so that you can make non-blocking calls t
 import asyncio
 
 from sync import AsyncSync
+from sync.common import Audio, GenerationOptions, Video
 
 client = AsyncSync(
     api_key="YOUR_API_KEY",
@@ -49,8 +62,19 @@ client = AsyncSync(
 
 
 async def main() -> None:
-    await client.batch.create(
-        dry_run=True,
+    await client.generations.create(
+        input=[
+            Video(
+                url="https://assets.sync.so/docs/example-video.mp4",
+            ),
+            Audio(
+                url="https://assets.sync.so/docs/example-audio.wav",
+            ),
+        ],
+        model="lipsync-2",
+        options=GenerationOptions(
+            sync_mode="loop",
+        ),
     )
 
 
@@ -66,7 +90,7 @@ will be thrown.
 from sync.core.api_error import ApiError
 
 try:
-    client.batch.create(...)
+    client.generations.create(...)
 except ApiError as e:
     print(e.status_code)
     print(e.body)
@@ -89,7 +113,7 @@ A request is deemed retryable when any of the following HTTP status codes is ret
 Use the `max_retries` request option to configure this behavior.
 
 ```python
-client.batch.create(..., request_options={
+client.generations.create(..., request_options={
     "max_retries": 1
 })
 ```
@@ -109,7 +133,7 @@ client = Sync(
 
 
 # Override timeout for a specific method
-client.batch.create(..., request_options={
+client.generations.create(..., request_options={
     "timeout_in_seconds": 1
 })
 ```
