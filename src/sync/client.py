@@ -4,8 +4,10 @@ import typing
 from .environment import SyncEnvironment
 import httpx
 from .core.client_wrapper import SyncClientWrapper
+from .batch.client import BatchClient
 from .generations.client import GenerationsClient
 from .core.client_wrapper import AsyncClientWrapper
+from .batch.client import AsyncBatchClient
 from .generations.client import AsyncGenerationsClient
 
 
@@ -69,6 +71,7 @@ class Sync:
             else httpx.Client(timeout=_defaulted_timeout),
             timeout=_defaulted_timeout,
         )
+        self.batch = BatchClient(client_wrapper=self._client_wrapper)
         self.generations = GenerationsClient(client_wrapper=self._client_wrapper)
 
 
@@ -132,6 +135,7 @@ class AsyncSync:
             else httpx.AsyncClient(timeout=_defaulted_timeout),
             timeout=_defaulted_timeout,
         )
+        self.batch = AsyncBatchClient(client_wrapper=self._client_wrapper)
         self.generations = AsyncGenerationsClient(client_wrapper=self._client_wrapper)
 
 

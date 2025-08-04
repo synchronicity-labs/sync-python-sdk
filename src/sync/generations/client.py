@@ -8,6 +8,7 @@ from ..common.types.input import Input
 from ..common.types.generation_options import GenerationOptions
 from ..core.request_options import RequestOptions
 from ..common.types.generation import Generation
+from .. import core
 from ..common.types.generation_id import GenerationId
 from ..common.types.generation_status import GenerationStatus
 from ..common.types.estimated_generation_cost import EstimatedGenerationCost
@@ -40,6 +41,7 @@ class GenerationsClient:
         input: typing.Sequence[Input],
         options: typing.Optional[GenerationOptions] = OMIT,
         webhook_url: typing.Optional[str] = OMIT,
+        output_file_name: typing.Optional[str] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> Generation:
         """
@@ -56,6 +58,9 @@ class GenerationsClient:
 
         webhook_url : typing.Optional[str]
             webhook url for generation status updates. once the generation completes we will send a POST request to the webhook url with the generation data.
+
+        output_file_name : typing.Optional[str]
+            Base filename for the generated output without extension. The .mp4 extension will be added automatically.  Only alphanumeric characters, underscores, and hyphens are allowed, up to 255 characters.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -89,7 +94,71 @@ class GenerationsClient:
         )
         """
         response = self._raw_client.create(
-            model=model, input=input, options=options, webhook_url=webhook_url, request_options=request_options
+            model=model,
+            input=input,
+            options=options,
+            webhook_url=webhook_url,
+            output_file_name=output_file_name,
+            request_options=request_options,
+        )
+        return response.data
+
+    def create_with_files(
+        self,
+        *,
+        model: Model,
+        video: typing.Optional[core.File] = OMIT,
+        audio: typing.Optional[core.File] = OMIT,
+        input: typing.Optional[typing.List[Input]] = OMIT,
+        options: typing.Optional[GenerationOptions] = OMIT,
+        webhook_url: typing.Optional[str] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> Generation:
+        """
+        Parameters
+        ----------
+        model : Model
+
+        video : typing.Optional[core.File]
+            See core.File for more documentation
+
+        audio : typing.Optional[core.File]
+            See core.File for more documentation
+
+        input : typing.Optional[typing.List[Input]]
+            Array of input objects. Can be used to provide urls for larger files. Each input should either have a file or a url. Audio input items can be provided as either: recorded/captured audio url or a text-to-speech input with tts provider configuration.
+
+        options : typing.Optional[GenerationOptions]
+
+        webhook_url : typing.Optional[str]
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        Generation
+            Job created successfully
+
+        Examples
+        --------
+        from sync import Sync
+
+        client = Sync(
+            api_key="YOUR_API_KEY",
+        )
+        client.generations.create_with_files(
+            model="lipsync-2",
+        )
+        """
+        response = self._raw_client.create_with_files(
+            model=model,
+            video=video,
+            audio=audio,
+            input=input,
+            options=options,
+            webhook_url=webhook_url,
+            request_options=request_options,
         )
         return response.data
 
@@ -160,6 +229,7 @@ class GenerationsClient:
         input: typing.Sequence[Input],
         options: typing.Optional[GenerationOptions] = OMIT,
         webhook_url: typing.Optional[str] = OMIT,
+        output_file_name: typing.Optional[str] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> typing.List[EstimatedGenerationCost]:
         """
@@ -176,6 +246,9 @@ class GenerationsClient:
 
         webhook_url : typing.Optional[str]
             webhook url for generation status updates. once the generation completes we will send a POST request to the webhook url with the generation data.
+
+        output_file_name : typing.Optional[str]
+            Base filename for the generated output without extension. The .mp4 extension will be added automatically.  Only alphanumeric characters, underscores, and hyphens are allowed, up to 255 characters.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -209,7 +282,12 @@ class GenerationsClient:
         )
         """
         response = self._raw_client.estimate_cost(
-            model=model, input=input, options=options, webhook_url=webhook_url, request_options=request_options
+            model=model,
+            input=input,
+            options=options,
+            webhook_url=webhook_url,
+            output_file_name=output_file_name,
+            request_options=request_options,
         )
         return response.data
 
@@ -236,6 +314,7 @@ class AsyncGenerationsClient:
         input: typing.Sequence[Input],
         options: typing.Optional[GenerationOptions] = OMIT,
         webhook_url: typing.Optional[str] = OMIT,
+        output_file_name: typing.Optional[str] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> Generation:
         """
@@ -252,6 +331,9 @@ class AsyncGenerationsClient:
 
         webhook_url : typing.Optional[str]
             webhook url for generation status updates. once the generation completes we will send a POST request to the webhook url with the generation data.
+
+        output_file_name : typing.Optional[str]
+            Base filename for the generated output without extension. The .mp4 extension will be added automatically.  Only alphanumeric characters, underscores, and hyphens are allowed, up to 255 characters.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -293,7 +375,79 @@ class AsyncGenerationsClient:
         asyncio.run(main())
         """
         response = await self._raw_client.create(
-            model=model, input=input, options=options, webhook_url=webhook_url, request_options=request_options
+            model=model,
+            input=input,
+            options=options,
+            webhook_url=webhook_url,
+            output_file_name=output_file_name,
+            request_options=request_options,
+        )
+        return response.data
+
+    async def create_with_files(
+        self,
+        *,
+        model: Model,
+        video: typing.Optional[core.File] = OMIT,
+        audio: typing.Optional[core.File] = OMIT,
+        input: typing.Optional[typing.List[Input]] = OMIT,
+        options: typing.Optional[GenerationOptions] = OMIT,
+        webhook_url: typing.Optional[str] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> Generation:
+        """
+        Parameters
+        ----------
+        model : Model
+
+        video : typing.Optional[core.File]
+            See core.File for more documentation
+
+        audio : typing.Optional[core.File]
+            See core.File for more documentation
+
+        input : typing.Optional[typing.List[Input]]
+            Array of input objects. Can be used to provide urls for larger files. Each input should either have a file or a url. Audio input items can be provided as either: recorded/captured audio url or a text-to-speech input with tts provider configuration.
+
+        options : typing.Optional[GenerationOptions]
+
+        webhook_url : typing.Optional[str]
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        Generation
+            Job created successfully
+
+        Examples
+        --------
+        import asyncio
+
+        from sync import AsyncSync
+
+        client = AsyncSync(
+            api_key="YOUR_API_KEY",
+        )
+
+
+        async def main() -> None:
+            await client.generations.create_with_files(
+                model="lipsync-2",
+            )
+
+
+        asyncio.run(main())
+        """
+        response = await self._raw_client.create_with_files(
+            model=model,
+            video=video,
+            audio=audio,
+            input=input,
+            options=options,
+            webhook_url=webhook_url,
+            request_options=request_options,
         )
         return response.data
 
@@ -380,6 +534,7 @@ class AsyncGenerationsClient:
         input: typing.Sequence[Input],
         options: typing.Optional[GenerationOptions] = OMIT,
         webhook_url: typing.Optional[str] = OMIT,
+        output_file_name: typing.Optional[str] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> typing.List[EstimatedGenerationCost]:
         """
@@ -396,6 +551,9 @@ class AsyncGenerationsClient:
 
         webhook_url : typing.Optional[str]
             webhook url for generation status updates. once the generation completes we will send a POST request to the webhook url with the generation data.
+
+        output_file_name : typing.Optional[str]
+            Base filename for the generated output without extension. The .mp4 extension will be added automatically.  Only alphanumeric characters, underscores, and hyphens are allowed, up to 255 characters.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -437,6 +595,11 @@ class AsyncGenerationsClient:
         asyncio.run(main())
         """
         response = await self._raw_client.estimate_cost(
-            model=model, input=input, options=options, webhook_url=webhook_url, request_options=request_options
+            model=model,
+            input=input,
+            options=options,
+            webhook_url=webhook_url,
+            output_file_name=output_file_name,
+            request_options=request_options,
         )
         return response.data

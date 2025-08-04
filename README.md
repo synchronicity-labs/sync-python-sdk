@@ -17,7 +17,7 @@ pip install syncsdk
 
 ## Reference
 
-A full reference for this library is available [here](./reference.md).
+A full reference for this library is available [here](https://github.com/synchronicity-labs/sync-python-sdk/blob/HEAD/./reference.md).
 
 ## Usage
 
@@ -25,24 +25,12 @@ Instantiate and use the client with the following:
 
 ```python
 from sync import Sync
-from sync.common import Audio, GenerationOptions, Video
 
 client = Sync(
     api_key="YOUR_API_KEY",
 )
-client.generations.create(
-    input=[
-        Video(
-            url="https://assets.sync.so/docs/example-video.mp4",
-        ),
-        Audio(
-            url="https://assets.sync.so/docs/example-audio.wav",
-        ),
-    ],
-    model="lipsync-2",
-    options=GenerationOptions(
-        sync_mode="loop",
-    ),
+client.batch.create(
+    dry_run=True,
 )
 ```
 
@@ -54,7 +42,6 @@ The SDK also exports an `async` client so that you can make non-blocking calls t
 import asyncio
 
 from sync import AsyncSync
-from sync.common import Audio, GenerationOptions, Video
 
 client = AsyncSync(
     api_key="YOUR_API_KEY",
@@ -62,19 +49,8 @@ client = AsyncSync(
 
 
 async def main() -> None:
-    await client.generations.create(
-        input=[
-            Video(
-                url="https://assets.sync.so/docs/example-video.mp4",
-            ),
-            Audio(
-                url="https://assets.sync.so/docs/example-audio.wav",
-            ),
-        ],
-        model="lipsync-2",
-        options=GenerationOptions(
-            sync_mode="loop",
-        ),
+    await client.batch.create(
+        dry_run=True,
     )
 
 
@@ -90,7 +66,7 @@ will be thrown.
 from sync.core.api_error import ApiError
 
 try:
-    client.generations.create(...)
+    client.batch.create(...)
 except ApiError as e:
     print(e.status_code)
     print(e.body)
@@ -113,7 +89,7 @@ A request is deemed retryable when any of the following HTTP status codes is ret
 Use the `max_retries` request option to configure this behavior.
 
 ```python
-client.generations.create(..., request_options={
+client.batch.create(..., request_options={
     "max_retries": 1
 })
 ```
@@ -133,7 +109,7 @@ client = Sync(
 
 
 # Override timeout for a specific method
-client.generations.create(..., request_options={
+client.batch.create(..., request_options={
     "timeout_in_seconds": 1
 })
 ```

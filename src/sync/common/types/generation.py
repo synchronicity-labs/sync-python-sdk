@@ -55,6 +55,13 @@ class Generation(UncheckedBaseModel):
     The URL of the output media.
     """
 
+    segment_output_url: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="segmentOutputUrl")] = (
+        pydantic.Field(default=None)
+    )
+    """
+    The URL of the segment output media.
+    """
+
     status: GenerationStatus = pydantic.Field()
     """
     The status of the generation.

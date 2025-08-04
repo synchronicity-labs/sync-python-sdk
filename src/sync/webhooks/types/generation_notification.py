@@ -56,6 +56,13 @@ class GenerationNotification(UncheckedBaseModel):
     url of the generated output media
     """
 
+    segment_output_url: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="segmentOutputUrl")] = (
+        pydantic.Field(default=None)
+    )
+    """
+    url of the segment output media
+    """
+
     webhook_url: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="webhookUrl")] = pydantic.Field(
         default=None
     )

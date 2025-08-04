@@ -34,6 +34,13 @@ class CreateGenerationDto(UncheckedBaseModel):
     webhook url for generation status updates. once the generation completes we will send a POST request to the webhook url with the generation data.
     """
 
+    output_file_name: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="outputFileName")] = (
+        pydantic.Field(default=None)
+    )
+    """
+    Base filename for the generated output without extension. The .mp4 extension will be added automatically.  Only alphanumeric characters, underscores, and hyphens are allowed, up to 255 characters.
+    """
+
     if IS_PYDANTIC_V2:
         model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)  # type: ignore # Pydantic v2
     else:

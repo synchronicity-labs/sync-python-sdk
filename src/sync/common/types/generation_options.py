@@ -4,48 +4,29 @@ from ...core.unchecked_base_model import UncheckedBaseModel
 import typing
 from .sync_mode import SyncMode
 import pydantic
+from .active_speaker import ActiveSpeaker
 from ...core.pydantic_utilities import IS_PYDANTIC_V2
 
 
 class GenerationOptions(UncheckedBaseModel):
     sync_mode: typing.Optional[SyncMode] = pydantic.Field(default=None)
     """
-    lipsync mode when audio and video durations are out of sync. By default if the audio and video durations are out of sync and audio is longer than video, the video will loop. Otherwise, the video will be cut off at the end of the audio.
+    Defines how to handle duration mismatches between video and audio inputs. See the [Media Content Tips](/compatibility-and-tips/media-content-tips#sync-mode-options) guide for a brief overview,  or the SyncMode enum below for detailed explanations of each option.
     """
 
     temperature: typing.Optional[float] = pydantic.Field(default=None)
     """
-    generation temperature randomness between 0 and 1. only works for lipsync-2 based models.
+    option to control how expressive lipsync can be. 0 -> least expressive, 1 -> most expressive. default:0.5
     """
 
-    active_speaker: typing.Optional[bool] = pydantic.Field(default=None)
+    active_speaker_detection: typing.Optional[ActiveSpeaker] = pydantic.Field(default=None)
     """
-    Whether to detect active speaker and apply generation to them
-    """
-
-    pads: typing.Optional[typing.List[int]] = pydantic.Field(default=None)
-    """
-    number of frames to pad the video on each side
+    Active speaker detection configuration. When enabled, automatically detects and applies lipsync only to the active speaker in videos with multiple people.
     """
 
-    speedup: typing.Optional[int] = pydantic.Field(default=None)
+    occlusion_detection_enabled: typing.Optional[bool] = pydantic.Field(default=None)
     """
-    speed up the video by this factor.
-    """
-
-    output_format: typing.Optional[str] = pydantic.Field(default=None)
-    """
-    output format of the generated video.
-    """
-
-    fps: typing.Optional[int] = pydantic.Field(default=None)
-    """
-    frames per second of the generated video.
-    """
-
-    output_resolution: typing.Optional[typing.List[int]] = pydantic.Field(default=None)
-    """
-    resolution of the generated video.
+    Whether to detect occlusion during generation, slows down generation speed.
     """
 
     if IS_PYDANTIC_V2:

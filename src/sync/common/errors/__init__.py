@@ -3,6 +3,15 @@
 from .bad_request_error import BadRequestError
 from .internal_server_error import InternalServerError
 from .not_found_error import NotFoundError
+from .payment_required_error import PaymentRequiredError
+from .too_many_requests_error import TooManyRequestsError
 from .unauthorized_error import UnauthorizedError
 
-__all__ = ["BadRequestError", "InternalServerError", "NotFoundError", "UnauthorizedError"]
+__all__ = [
+    "BadRequestError",
+    "InternalServerError",
+    "NotFoundError",
+    "PaymentRequiredError",
+    "TooManyRequestsError",
+    "UnauthorizedError",
+]

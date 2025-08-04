@@ -2,4 +2,4 @@
 
 import typing
 
-SyncMode = typing.Union[typing.Literal["loop", "bounce", "cut_off", "silence", "remap"], typing.Any]
+SyncMode = typing.Union[typing.Literal["bounce", "loop", "cut_off", "silence", "remap"], typing.Any]

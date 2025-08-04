@@ -16,6 +16,7 @@ from ..common.errors.unauthorized_error import UnauthorizedError
 from ..common.errors.internal_server_error import InternalServerError
 from json.decoder import JSONDecodeError
 from ..core.api_error import ApiError
+from .. import core
 from ..common.types.generation_id import GenerationId
 from ..core.jsonable_encoder import jsonable_encoder
 from ..common.errors.not_found_error import NotFoundError
@@ -39,6 +40,7 @@ class RawGenerationsClient:
         input: typing.Sequence[Input],
         options: typing.Optional[GenerationOptions] = OMIT,
         webhook_url: typing.Optional[str] = OMIT,
+        output_file_name: typing.Optional[str] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[Generation]:
         """
@@ -55,6 +57,9 @@ class RawGenerationsClient:
 
         webhook_url : typing.Optional[str]
             webhook url for generation status updates. once the generation completes we will send a POST request to the webhook url with the generation data.
+
+        output_file_name : typing.Optional[str]
+            Base filename for the generated output without extension. The .mp4 extension will be added automatically.  Only alphanumeric characters, underscores, and hyphens are allowed, up to 255 characters.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -76,6 +81,105 @@ class RawGenerationsClient:
                     object_=options, annotation=GenerationOptions, direction="write"
                 ),
                 "webhookUrl": webhook_url,
+                "outputFileName": output_file_name,
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    Generation,
+                    construct_type(
+                        type_=Generation,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return HttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 500:
+                raise InternalServerError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, body=_response.text)
+        raise ApiError(status_code=_response.status_code, body=_response_json)
+
+    def create_with_files(
+        self,
+        *,
+        model: Model,
+        video: typing.Optional[core.File] = OMIT,
+        audio: typing.Optional[core.File] = OMIT,
+        input: typing.Optional[typing.List[Input]] = OMIT,
+        options: typing.Optional[GenerationOptions] = OMIT,
+        webhook_url: typing.Optional[str] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> HttpResponse[Generation]:
+        """
+        Parameters
+        ----------
+        model : Model
+
+        video : typing.Optional[core.File]
+            See core.File for more documentation
+
+        audio : typing.Optional[core.File]
+            See core.File for more documentation
+
+        input : typing.Optional[typing.List[Input]]
+            Array of input objects. Can be used to provide urls for larger files. Each input should either have a file or a url. Audio input items can be provided as either: recorded/captured audio url or a text-to-speech input with tts provider configuration.
+
+        options : typing.Optional[GenerationOptions]
+
+        webhook_url : typing.Optional[str]
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        HttpResponse[Generation]
+            Job created successfully
+        """
+        _response = self._client_wrapper.httpx_client.request(
+            "v2/generate",
+            method="POST",
+            data={
+                "model": model,
+                "input": input,
+                "options": options,
+                "webhookUrl": webhook_url,
+            },
+            files={
+                **({"video": video} if video is not None else {}),
+                **({"audio": audio} if audio is not None else {}),
             },
             request_options=request_options,
             omit=OMIT,
@@ -261,6 +365,7 @@ class RawGenerationsClient:
         input: typing.Sequence[Input],
         options: typing.Optional[GenerationOptions] = OMIT,
         webhook_url: typing.Optional[str] = OMIT,
+        output_file_name: typing.Optional[str] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[typing.List[EstimatedGenerationCost]]:
         """
@@ -277,6 +382,9 @@ class RawGenerationsClient:
 
         webhook_url : typing.Optional[str]
             webhook url for generation status updates. once the generation completes we will send a POST request to the webhook url with the generation data.
+
+        output_file_name : typing.Optional[str]
+            Base filename for the generated output without extension. The .mp4 extension will be added automatically.  Only alphanumeric characters, underscores, and hyphens are allowed, up to 255 characters.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -298,6 +406,7 @@ class RawGenerationsClient:
                     object_=options, annotation=GenerationOptions, direction="write"
                 ),
                 "webhookUrl": webhook_url,
+                "outputFileName": output_file_name,
             },
             request_options=request_options,
             omit=OMIT,
@@ -349,6 +458,7 @@ class AsyncRawGenerationsClient:
         input: typing.Sequence[Input],
         options: typing.Optional[GenerationOptions] = OMIT,
         webhook_url: typing.Optional[str] = OMIT,
+        output_file_name: typing.Optional[str] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[Generation]:
         """
@@ -365,6 +475,9 @@ class AsyncRawGenerationsClient:
 
         webhook_url : typing.Optional[str]
             webhook url for generation status updates. once the generation completes we will send a POST request to the webhook url with the generation data.
+
+        output_file_name : typing.Optional[str]
+            Base filename for the generated output without extension. The .mp4 extension will be added automatically.  Only alphanumeric characters, underscores, and hyphens are allowed, up to 255 characters.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -386,6 +499,105 @@ class AsyncRawGenerationsClient:
                     object_=options, annotation=GenerationOptions, direction="write"
                 ),
                 "webhookUrl": webhook_url,
+                "outputFileName": output_file_name,
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    Generation,
+                    construct_type(
+                        type_=Generation,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return AsyncHttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 500:
+                raise InternalServerError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, body=_response.text)
+        raise ApiError(status_code=_response.status_code, body=_response_json)
+
+    async def create_with_files(
+        self,
+        *,
+        model: Model,
+        video: typing.Optional[core.File] = OMIT,
+        audio: typing.Optional[core.File] = OMIT,
+        input: typing.Optional[typing.List[Input]] = OMIT,
+        options: typing.Optional[GenerationOptions] = OMIT,
+        webhook_url: typing.Optional[str] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> AsyncHttpResponse[Generation]:
+        """
+        Parameters
+        ----------
+        model : Model
+
+        video : typing.Optional[core.File]
+            See core.File for more documentation
+
+        audio : typing.Optional[core.File]
+            See core.File for more documentation
+
+        input : typing.Optional[typing.List[Input]]
+            Array of input objects. Can be used to provide urls for larger files. Each input should either have a file or a url. Audio input items can be provided as either: recorded/captured audio url or a text-to-speech input with tts provider configuration.
+
+        options : typing.Optional[GenerationOptions]
+
+        webhook_url : typing.Optional[str]
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        AsyncHttpResponse[Generation]
+            Job created successfully
+        """
+        _response = await self._client_wrapper.httpx_client.request(
+            "v2/generate",
+            method="POST",
+            data={
+                "model": model,
+                "input": input,
+                "options": options,
+                "webhookUrl": webhook_url,
+            },
+            files={
+                **({"video": video} if video is not None else {}),
+                **({"audio": audio} if audio is not None else {}),
             },
             request_options=request_options,
             omit=OMIT,
@@ -571,6 +783,7 @@ class AsyncRawGenerationsClient:
         input: typing.Sequence[Input],
         options: typing.Optional[GenerationOptions] = OMIT,
         webhook_url: typing.Optional[str] = OMIT,
+        output_file_name: typing.Optional[str] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[typing.List[EstimatedGenerationCost]]:
         """
@@ -587,6 +800,9 @@ class AsyncRawGenerationsClient:
 
         webhook_url : typing.Optional[str]
             webhook url for generation status updates. once the generation completes we will send a POST request to the webhook url with the generation data.
+
+        output_file_name : typing.Optional[str]
+            Base filename for the generated output without extension. The .mp4 extension will be added automatically.  Only alphanumeric characters, underscores, and hyphens are allowed, up to 255 characters.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -608,6 +824,7 @@ class AsyncRawGenerationsClient:
                     object_=options, annotation=GenerationOptions, direction="write"
                 ),
                 "webhookUrl": webhook_url,
+                "outputFileName": output_file_name,
             },
             request_options=request_options,
             omit=OMIT,
