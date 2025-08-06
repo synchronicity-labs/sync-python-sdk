@@ -1,9 +1,9 @@
-# Sync Python Library
+# Sync Python SDK
 
 [![fern shield](https://img.shields.io/badge/%F0%9F%8C%BF-Built%20with%20Fern-brightgreen)](https://buildwithfern.com?utm_source=github&utm_medium=github&utm_campaign=readme&utm_source=https%3A%2F%2Fgithub.com%2Fsynchronicity-labs%2Fsync-python-sdk)
 [![pypi](https://img.shields.io/pypi/v/syncsdk)](https://pypi.python.org/pypi/syncsdk)
 
-The Sync Python library provides convenient access to the Sync API from Python.
+The Sync Python SDK provides convenient access to the Sync API from Python.
 
 ## Documentation
 
@@ -21,16 +21,14 @@ A full reference for this library is available [here](./reference.md).
 
 ## Usage
 
-Instantiate and use the client with the following:
+Set SYNC_API_KEY environment variable to your [Sync](https://sync.so/settings/api-keys) and use the client with the following:
 
 ```python
 from sync import Sync
 from sync.common import Audio, GenerationOptions, Video
 
-client = Sync(
-    api_key="YOUR_API_KEY",
-)
-client.generations.create(
+sync = Sync()
+sync.generations.create(
     input=[
         Video(
             url="https://assets.sync.so/docs/example-video.mp4",
