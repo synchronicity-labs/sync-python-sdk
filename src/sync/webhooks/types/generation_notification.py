@@ -37,6 +37,11 @@ class GenerationNotification(UncheckedBaseModel):
     error message if the generation failed
     """
 
+    error_code: typing.Optional[str] = pydantic.Field(default=None)
+    """
+    error code if the generation failed
+    """
+
     options: typing.Optional[GenerationOptions] = pydantic.Field(default=None)
     """
     options used for the generation

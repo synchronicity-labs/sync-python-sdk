@@ -25,6 +25,11 @@ class Generation(UncheckedBaseModel):
     The error message if the generation failed.
     """
 
+    error_code: typing.Optional[str] = pydantic.Field(default=None)
+    """
+    The error code if the generation failed.
+    """
+
     id: GenerationId
     input: typing.List[Input] = pydantic.Field()
     """
