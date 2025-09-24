@@ -10,6 +10,7 @@ from .generation_id import GenerationId
 from .input import Input
 from .model import Model
 from .generation_options import GenerationOptions
+from .generation_segment import GenerationSegment
 from .generation_status import GenerationStatus
 from ...core.pydantic_utilities import IS_PYDANTIC_V2
 
@@ -58,6 +59,11 @@ class Generation(UncheckedBaseModel):
     )
     """
     The URL of the output media.
+    """
+
+    segments: typing.Optional[typing.List[GenerationSegment]] = pydantic.Field(default=None)
+    """
+    The segments of the generation.
     """
 
     segment_output_url: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="segmentOutputUrl")] = (

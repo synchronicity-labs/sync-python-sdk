@@ -18,12 +18,16 @@ class SegmentAudioInput(UncheckedBaseModel):
     Reference ID of the audio/text-to-speech input to use for this segment
     """
 
-    start_time: typing.Optional[float] = pydantic.Field(default=None)
+    start_time: typing_extensions.Annotated[typing.Optional[float], FieldMetadata(alias="startTime")] = pydantic.Field(
+        default=None
+    )
     """
     Optional start time (in seconds) to crop the referenced audio. When specified, end_time must also be provided.
     """
 
-    end_time: typing.Optional[float] = pydantic.Field(default=None)
+    end_time: typing_extensions.Annotated[typing.Optional[float], FieldMetadata(alias="endTime")] = pydantic.Field(
+        default=None
+    )
     """
     Optional end time (in seconds) to crop the referenced audio. When specified, start_time must also be provided.
     """
