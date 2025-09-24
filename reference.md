@@ -299,7 +299,7 @@ client.generations.create(
 <dl>
 <dd>
 
-**input:** `typing.Sequence[Input]` — Array of input objects. Must include one video input item and one audio input item. Audio input items can be provided as either: recorded/captured audio url or a text-to-speech input with tts provider configuration.
+**input:** `typing.Sequence[Input]` — Array of input objects. Must include one video input item and at least one audio input item. Audio input items can be provided as either: recorded/captured audio url or a text-to-speech input with tts provider configuration. When using segments, multiple audio inputs can be provided with unique refId values.
     
 </dd>
 </dl>
@@ -308,6 +308,14 @@ client.generations.create(
 <dd>
 
 **options:** `typing.Optional[GenerationOptions]` — additional options available for generation.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**segments:** `typing.Optional[typing.Sequence[GenerationSegment]]` — segments definition list. When provided, allows defining one or more video segments with different audio inputs for each segment. Each segment specifies a time range and references an audio input by refId.
     
 </dd>
 </dl>
@@ -609,7 +617,7 @@ client.generations.estimate_cost(
 <dl>
 <dd>
 
-**input:** `typing.Sequence[Input]` — Array of input objects. Must include one video input item and one audio input item. Audio input items can be provided as either: recorded/captured audio url or a text-to-speech input with tts provider configuration.
+**input:** `typing.Sequence[Input]` — Array of input objects. Must include one video input item and at least one audio input item. Audio input items can be provided as either: recorded/captured audio url or a text-to-speech input with tts provider configuration. When using segments, multiple audio inputs can be provided with unique refId values.
     
 </dd>
 </dl>
@@ -618,6 +626,14 @@ client.generations.estimate_cost(
 <dd>
 
 **options:** `typing.Optional[GenerationOptions]` — additional options available for generation.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**segments:** `typing.Optional[typing.Sequence[GenerationSegment]]` — segments definition list. When provided, allows defining one or more video segments with different audio inputs for each segment. Each segment specifies a time range and references an audio input by refId.
     
 </dd>
 </dl>

@@ -4,6 +4,8 @@ from ...core.unchecked_base_model import UncheckedBaseModel
 import typing
 from .tts_provider_config import TtsProviderConfig
 import pydantic
+import typing_extensions
+from ...core.serialization import FieldMetadata
 from ...core.pydantic_utilities import IS_PYDANTIC_V2
 
 
@@ -16,6 +18,13 @@ class Tts(UncheckedBaseModel):
     provider: TtsProviderConfig = pydantic.Field()
     """
     Integration provider configuration
+    """
+
+    ref_id: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="refId")] = pydantic.Field(
+        default=None
+    )
+    """
+    Reference identifier for this audio input, used to link audio inputs to specific segments when using [segments](/api-reference/api/generate-api/create#request.body.segments). Required when using segments array.
     """
 
     if IS_PYDANTIC_V2:

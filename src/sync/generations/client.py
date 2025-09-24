@@ -6,6 +6,7 @@ from .raw_client import RawGenerationsClient
 from ..common.types.model import Model
 from ..common.types.input import Input
 from ..common.types.generation_options import GenerationOptions
+from ..common.types.generation_segment import GenerationSegment
 from ..core.request_options import RequestOptions
 from ..common.types.generation import Generation
 from .. import core
@@ -40,6 +41,7 @@ class GenerationsClient:
         model: Model,
         input: typing.Sequence[Input],
         options: typing.Optional[GenerationOptions] = OMIT,
+        segments: typing.Optional[typing.Sequence[GenerationSegment]] = OMIT,
         webhook_url: typing.Optional[str] = OMIT,
         output_file_name: typing.Optional[str] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
@@ -51,10 +53,13 @@ class GenerationsClient:
             name of the model to use for generation.
 
         input : typing.Sequence[Input]
-            Array of input objects. Must include one video input item and one audio input item. Audio input items can be provided as either: recorded/captured audio url or a text-to-speech input with tts provider configuration.
+            Array of input objects. Must include one video input item and at least one audio input item. Audio input items can be provided as either: recorded/captured audio url or a text-to-speech input with tts provider configuration. When using segments, multiple audio inputs can be provided with unique refId values.
 
         options : typing.Optional[GenerationOptions]
             additional options available for generation.
+
+        segments : typing.Optional[typing.Sequence[GenerationSegment]]
+            segments definition list. When provided, allows defining one or more video segments with different audio inputs for each segment. Each segment specifies a time range and references an audio input by refId.
 
         webhook_url : typing.Optional[str]
             webhook url for generation status updates. once the generation completes we will send a POST request to the webhook url with the generation data.
@@ -97,6 +102,7 @@ class GenerationsClient:
             model=model,
             input=input,
             options=options,
+            segments=segments,
             webhook_url=webhook_url,
             output_file_name=output_file_name,
             request_options=request_options,
@@ -228,6 +234,7 @@ class GenerationsClient:
         model: Model,
         input: typing.Sequence[Input],
         options: typing.Optional[GenerationOptions] = OMIT,
+        segments: typing.Optional[typing.Sequence[GenerationSegment]] = OMIT,
         webhook_url: typing.Optional[str] = OMIT,
         output_file_name: typing.Optional[str] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
@@ -239,10 +246,13 @@ class GenerationsClient:
             name of the model to use for generation.
 
         input : typing.Sequence[Input]
-            Array of input objects. Must include one video input item and one audio input item. Audio input items can be provided as either: recorded/captured audio url or a text-to-speech input with tts provider configuration.
+            Array of input objects. Must include one video input item and at least one audio input item. Audio input items can be provided as either: recorded/captured audio url or a text-to-speech input with tts provider configuration. When using segments, multiple audio inputs can be provided with unique refId values.
 
         options : typing.Optional[GenerationOptions]
             additional options available for generation.
+
+        segments : typing.Optional[typing.Sequence[GenerationSegment]]
+            segments definition list. When provided, allows defining one or more video segments with different audio inputs for each segment. Each segment specifies a time range and references an audio input by refId.
 
         webhook_url : typing.Optional[str]
             webhook url for generation status updates. once the generation completes we will send a POST request to the webhook url with the generation data.
@@ -285,6 +295,7 @@ class GenerationsClient:
             model=model,
             input=input,
             options=options,
+            segments=segments,
             webhook_url=webhook_url,
             output_file_name=output_file_name,
             request_options=request_options,
@@ -313,6 +324,7 @@ class AsyncGenerationsClient:
         model: Model,
         input: typing.Sequence[Input],
         options: typing.Optional[GenerationOptions] = OMIT,
+        segments: typing.Optional[typing.Sequence[GenerationSegment]] = OMIT,
         webhook_url: typing.Optional[str] = OMIT,
         output_file_name: typing.Optional[str] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
@@ -324,10 +336,13 @@ class AsyncGenerationsClient:
             name of the model to use for generation.
 
         input : typing.Sequence[Input]
-            Array of input objects. Must include one video input item and one audio input item. Audio input items can be provided as either: recorded/captured audio url or a text-to-speech input with tts provider configuration.
+            Array of input objects. Must include one video input item and at least one audio input item. Audio input items can be provided as either: recorded/captured audio url or a text-to-speech input with tts provider configuration. When using segments, multiple audio inputs can be provided with unique refId values.
 
         options : typing.Optional[GenerationOptions]
             additional options available for generation.
+
+        segments : typing.Optional[typing.Sequence[GenerationSegment]]
+            segments definition list. When provided, allows defining one or more video segments with different audio inputs for each segment. Each segment specifies a time range and references an audio input by refId.
 
         webhook_url : typing.Optional[str]
             webhook url for generation status updates. once the generation completes we will send a POST request to the webhook url with the generation data.
@@ -378,6 +393,7 @@ class AsyncGenerationsClient:
             model=model,
             input=input,
             options=options,
+            segments=segments,
             webhook_url=webhook_url,
             output_file_name=output_file_name,
             request_options=request_options,
@@ -533,6 +549,7 @@ class AsyncGenerationsClient:
         model: Model,
         input: typing.Sequence[Input],
         options: typing.Optional[GenerationOptions] = OMIT,
+        segments: typing.Optional[typing.Sequence[GenerationSegment]] = OMIT,
         webhook_url: typing.Optional[str] = OMIT,
         output_file_name: typing.Optional[str] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
@@ -544,10 +561,13 @@ class AsyncGenerationsClient:
             name of the model to use for generation.
 
         input : typing.Sequence[Input]
-            Array of input objects. Must include one video input item and one audio input item. Audio input items can be provided as either: recorded/captured audio url or a text-to-speech input with tts provider configuration.
+            Array of input objects. Must include one video input item and at least one audio input item. Audio input items can be provided as either: recorded/captured audio url or a text-to-speech input with tts provider configuration. When using segments, multiple audio inputs can be provided with unique refId values.
 
         options : typing.Optional[GenerationOptions]
             additional options available for generation.
+
+        segments : typing.Optional[typing.Sequence[GenerationSegment]]
+            segments definition list. When provided, allows defining one or more video segments with different audio inputs for each segment. Each segment specifies a time range and references an audio input by refId.
 
         webhook_url : typing.Optional[str]
             webhook url for generation status updates. once the generation completes we will send a POST request to the webhook url with the generation data.
@@ -598,6 +618,7 @@ class AsyncGenerationsClient:
             model=model,
             input=input,
             options=options,
+            segments=segments,
             webhook_url=webhook_url,
             output_file_name=output_file_name,
             request_options=request_options,

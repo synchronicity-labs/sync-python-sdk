@@ -15,9 +15,11 @@ from .generation_error import GenerationError
 from .generation_error_message import GenerationErrorMessage
 from .generation_id import GenerationId
 from .generation_options import GenerationOptions
+from .generation_segment import GenerationSegment
 from .generation_status import GenerationStatus
 from .input import Input
 from .model import Model
+from .segment_audio_input import SegmentAudioInput
 from .segment_frames import SegmentFrames
 from .segment_secs import SegmentSecs
 from .sync_mode import SyncMode
@@ -42,9 +44,11 @@ __all__ = [
     "GenerationErrorMessage",
     "GenerationId",
     "GenerationOptions",
+    "GenerationSegment",
     "GenerationStatus",
     "Input",
     "Model",
+    "SegmentAudioInput",
     "SegmentFrames",
     "SegmentSecs",
     "SyncMode",

@@ -2,4 +2,4 @@
 
 import typing
 
-GenerationStatus = typing.Union[typing.Literal["PENDING", "PROCESSING", "COMPLETED", "FAILED"], typing.Any]
+GenerationStatus = typing.Union[typing.Literal["PENDING", "PROCESSING", "COMPLETED", "FAILED", "REJECTED"], typing.Any]

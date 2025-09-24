@@ -6,6 +6,7 @@ import pydantic
 import typing
 from .input import Input
 from .generation_options import GenerationOptions
+from .generation_segment import GenerationSegment
 import typing_extensions
 from ...core.serialization import FieldMetadata
 from ...core.pydantic_utilities import IS_PYDANTIC_V2
@@ -19,12 +20,17 @@ class CreateGenerationDto(UncheckedBaseModel):
 
     input: typing.List[Input] = pydantic.Field()
     """
-    Array of input objects. Must include one video input item and one audio input item. Audio input items can be provided as either: recorded/captured audio url or a text-to-speech input with tts provider configuration.
+    Array of input objects. Must include one video input item and at least one audio input item. Audio input items can be provided as either: recorded/captured audio url or a text-to-speech input with tts provider configuration. When using segments, multiple audio inputs can be provided with unique refId values.
     """
 
     options: typing.Optional[GenerationOptions] = pydantic.Field(default=None)
     """
     additional options available for generation.
+    """
+
+    segments: typing.Optional[typing.List[GenerationSegment]] = pydantic.Field(default=None)
+    """
+    segments definition list. When provided, allows defining one or more video segments with different audio inputs for each segment. Each segment specifies a time range and references an audio input by refId.
     """
 
     webhook_url: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="webhookUrl")] = pydantic.Field(
