@@ -9,6 +9,7 @@ from .batch_status import BatchStatus
 from .create_batch_response import CreateBatchResponse
 from .create_generation_dto import CreateGenerationDto
 from .eleven_labs import ElevenLabs
+from .emotion import Emotion
 from .estimated_generation_cost import EstimatedGenerationCost
 from .generation import Generation
 from .generation_error import GenerationError
@@ -19,6 +20,7 @@ from .generation_segment import GenerationSegment
 from .generation_status import GenerationStatus
 from .input import Input
 from .model import Model
+from .model_mode import ModelMode
 from .segment_audio_input import SegmentAudioInput
 from .segment_frames import SegmentFrames
 from .segment_secs import SegmentSecs
@@ -38,6 +40,7 @@ __all__ = [
     "CreateBatchResponse",
     "CreateGenerationDto",
     "ElevenLabs",
+    "Emotion",
     "EstimatedGenerationCost",
     "Generation",
     "GenerationError",
@@ -48,6 +51,7 @@ __all__ = [
     "GenerationStatus",
     "Input",
     "Model",
+    "ModelMode",
     "SegmentAudioInput",
     "SegmentFrames",
     "SegmentSecs",

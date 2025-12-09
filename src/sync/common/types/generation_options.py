@@ -4,6 +4,8 @@ from ...core.unchecked_base_model import UncheckedBaseModel
 import typing
 from .sync_mode import SyncMode
 import pydantic
+from .model_mode import ModelMode
+from .emotion import Emotion
 from .active_speaker import ActiveSpeaker
 from ...core.pydantic_utilities import IS_PYDANTIC_V2
 
@@ -12,6 +14,16 @@ class GenerationOptions(UncheckedBaseModel):
     sync_mode: typing.Optional[SyncMode] = pydantic.Field(default=None)
     """
     Defines how to handle duration mismatches between video and audio inputs. See the [Media Content Tips](/compatibility-and-tips/media-content-tips#sync-mode-options) guide for a brief overview,  or the SyncMode enum below for detailed explanations of each option.
+    """
+
+    model_mode: typing.Optional[ModelMode] = pydantic.Field(default=None)
+    """
+    edit region for the model. only works with react-1. defaults to face, which affects lipsync + emotions in the face region. Available options are lips/face/head. When head is selected, model generates natural talking head movements along with emotions + lipsync.
+    """
+
+    prompt: typing.Optional[Emotion] = pydantic.Field(default=None)
+    """
+    emotion prompt for the generation. only works for react-1 model. Only single word emotions are supported at the moment.
     """
 
     temperature: typing.Optional[float] = pydantic.Field(default=None)
