@@ -16,6 +16,21 @@ class ActiveSpeaker(UncheckedBaseModel):
     Whether to automatically detect and apply generation to the active speaker
     """
 
+    frame_number: typing.Optional[int] = pydantic.Field(default=None)
+    """
+    Frame index that corresponds to the provided coordinates for manual speaker selection
+    """
+
+    coordinates: typing.Optional[typing.List[int]] = pydantic.Field(default=None)
+    """
+    Reference point [x, y] on the speaker's face in the specified frame_number
+    """
+
+    bounding_boxes: typing.Optional[typing.List[typing.Optional[typing.List[int]]]] = pydantic.Field(default=None)
+    """
+    Per-frame array of bounding boxes [x1, y1, x2, y2] for the detected face, or null if no box for that frame. Use instead of frame_number + coordinates when you already have detection data.
+    """
+
     if IS_PYDANTIC_V2:
         model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)  # type: ignore # Pydantic v2
     else:

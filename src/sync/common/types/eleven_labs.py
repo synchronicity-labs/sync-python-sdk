@@ -12,12 +12,24 @@ class ElevenLabs(UncheckedBaseModel):
     name: typing.Literal["elevenlabs"] = "elevenlabs"
     voice_id: typing_extensions.Annotated[str, FieldMetadata(alias="voiceId")] = pydantic.Field()
     """
-    id of the voice to be used for generation
+    sync voice id (copied from cloned voices in the Studio) or ElevenLabs voice ID. Required.
     """
 
     script: str = pydantic.Field()
     """
     script to be used for generation
+    """
+
+    stability: typing.Optional[float] = pydantic.Field(default=None)
+    """
+    determines how stable the voice is and the randomness between each generation. lower values introduce broader emotional range for the voice. higher values can result in a monotonous voice with limited emotion.
+    """
+
+    similarity_boost: typing_extensions.Annotated[typing.Optional[float], FieldMetadata(alias="similarityBoost")] = (
+        pydantic.Field(default=None)
+    )
+    """
+    determines how closely the ai should adhere to the original voice when attempting to replicate it.
     """
 
     if IS_PYDANTIC_V2:
