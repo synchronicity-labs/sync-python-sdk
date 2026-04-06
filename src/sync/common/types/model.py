@@ -2,4 +2,6 @@
 
 import typing
 
-Model = typing.Union[typing.Literal["lipsync-2", "lipsync-1.9.0-beta", "lipsync-2-pro", "react-1"], typing.Any]
+Model = typing.Union[
+    typing.Literal["lipsync-2", "lipsync-1.9.0-beta", "lipsync-2-pro", "react-1", "sync-3"], typing.Any
+]

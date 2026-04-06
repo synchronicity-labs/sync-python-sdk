@@ -1,4 +1,186 @@
 # Reference
+## Assets
+<details><summary><code>client.assets.<a href="src/sync/assets/client.py">list</a>(...)</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+List all assets in your organization's media library.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+from sync import Sync
+
+client = Sync(
+    api_key="YOUR_API_KEY",
+)
+client.assets.list(
+    limit=10,
+    sort_by="dateDesc",
+)
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**project_id:** `typing.Optional[str]` — Filter assets by project ID.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**limit:** `typing.Optional[int]` — Maximum number of assets to return (1-100).
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**cursor:** `typing.Optional[str]` — Cursor for pagination.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**search_query:** `typing.Optional[str]` — Search assets by name.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**sort_by:** `typing.Optional[AssetSort]` — Sort order for the results.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**types:** `typing.Optional[typing.Sequence[AssetType]]` — Filter by asset types. Accepts multiple types as a comma-separated list (AUDIO, VIDEO, IMAGE).
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
+<details><summary><code>client.assets.<a href="src/sync/assets/client.py">get</a>(...)</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Retrieve a specific asset by ID.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+from sync import Sync
+
+client = Sync(
+    api_key="YOUR_API_KEY",
+)
+client.assets.get(
+    id="550e8400-e29b-41d4-a716-446655440000",
+)
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**id:** `AssetId` 
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
 ## Batch
 <details><summary><code>client.batch.<a href="src/sync/batch/client.py">create</a>(...)</code></summary>
 <dl>
@@ -541,7 +723,15 @@ client.generations.list()
 <dl>
 <dd>
 
-**status:** `typing.Optional[GenerationStatus]` — Filter generations by status
+**status:** `typing.Optional[typing.Sequence[GenerationStatus]]` — Filter generations by status. Accepts multiple statuses as a comma-separated list.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**ids:** `typing.Optional[typing.Sequence[str]]` — Filter generations by ID. Accepts multiple IDs as a comma-separated list.
     
 </dd>
 </dl>
@@ -653,6 +843,67 @@ client.generations.estimate_cost(
     
 </dd>
 </dl>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
+## Models
+<details><summary><code>client.models.<a href="src/sync/models/client.py">list</a>()</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+List all available models for the authenticated user. Returns active (non-deprecated) models the user has access to, including any feature-flagged models enabled for their account.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+from sync import Sync
+
+client = Sync(
+    api_key="YOUR_API_KEY",
+)
+client.models.list()
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
 
 <dl>
 <dd>

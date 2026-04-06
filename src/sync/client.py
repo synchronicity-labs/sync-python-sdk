@@ -6,11 +6,15 @@ import os
 import httpx
 from .core.api_error import ApiError
 from .core.client_wrapper import SyncClientWrapper
+from .assets.client import AssetsClient
 from .batch.client import BatchClient
 from .generations.client import GenerationsClient
+from .models.client import ModelsClient
 from .core.client_wrapper import AsyncClientWrapper
+from .assets.client import AsyncAssetsClient
 from .batch.client import AsyncBatchClient
 from .generations.client import AsyncGenerationsClient
+from .models.client import AsyncModelsClient
 
 
 class Sync:
@@ -75,8 +79,10 @@ class Sync:
             else httpx.Client(timeout=_defaulted_timeout),
             timeout=_defaulted_timeout,
         )
+        self.assets = AssetsClient(client_wrapper=self._client_wrapper)
         self.batch = BatchClient(client_wrapper=self._client_wrapper)
         self.generations = GenerationsClient(client_wrapper=self._client_wrapper)
+        self.models = ModelsClient(client_wrapper=self._client_wrapper)
 
 
 class AsyncSync:
@@ -141,8 +147,10 @@ class AsyncSync:
             else httpx.AsyncClient(timeout=_defaulted_timeout),
             timeout=_defaulted_timeout,
         )
+        self.assets = AsyncAssetsClient(client_wrapper=self._client_wrapper)
         self.batch = AsyncBatchClient(client_wrapper=self._client_wrapper)
         self.generations = AsyncGenerationsClient(client_wrapper=self._client_wrapper)
+        self.models = AsyncModelsClient(client_wrapper=self._client_wrapper)
 
 
 def _get_base_url(*, base_url: typing.Optional[str] = None, environment: SyncEnvironment) -> str:

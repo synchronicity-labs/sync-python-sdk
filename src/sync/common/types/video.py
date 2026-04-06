@@ -3,16 +3,30 @@
 from ...core.unchecked_base_model import UncheckedBaseModel
 import typing
 import pydantic
+import typing_extensions
+from .asset_id import AssetId
+from ...core.serialization import FieldMetadata
 from .segment_secs import SegmentSecs
 from .segment_frames import SegmentFrames
 from ...core.pydantic_utilities import IS_PYDANTIC_V2
 
 
 class Video(UncheckedBaseModel):
-    type: typing.Literal["video"] = "video"
-    url: str = pydantic.Field()
     """
-    URL of the video to be used for generation
+    Video input for generation. Provide either `url` or `assetId` (one is required).
+    """
+
+    type: typing.Literal["video"] = "video"
+    url: typing.Optional[str] = pydantic.Field(default=None)
+    """
+    URL of the video to be used for generation. Either `url` or `assetId` must be provided.
+    """
+
+    asset_id: typing_extensions.Annotated[typing.Optional[AssetId], FieldMetadata(alias="assetId")] = pydantic.Field(
+        default=None
+    )
+    """
+    ID of a video asset from your media library. Either `url` or `assetId` must be provided.
     """
 
     segments_secs: typing.Optional[SegmentSecs] = pydantic.Field(default=None)

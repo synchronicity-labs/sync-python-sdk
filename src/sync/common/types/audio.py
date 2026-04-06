@@ -4,6 +4,7 @@ from ...core.unchecked_base_model import UncheckedBaseModel
 import typing
 import pydantic
 import typing_extensions
+from .asset_id import AssetId
 from ...core.serialization import FieldMetadata
 from ...core.pydantic_utilities import IS_PYDANTIC_V2
 
@@ -14,9 +15,16 @@ class Audio(UncheckedBaseModel):
     """
 
     type: typing.Literal["audio"] = "audio"
-    url: str = pydantic.Field()
+    url: typing.Optional[str] = pydantic.Field(default=None)
     """
-    URL of the audio to be used for generation
+    URL of the audio to be used for generation. Either `url` or `assetId` must be provided.
+    """
+
+    asset_id: typing_extensions.Annotated[typing.Optional[AssetId], FieldMetadata(alias="assetId")] = pydantic.Field(
+        default=None
+    )
+    """
+    ID of an audio asset from your media library. Either `url` or `assetId` must be provided.
     """
 
     ref_id: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="refId")] = pydantic.Field(

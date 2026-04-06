@@ -199,14 +199,18 @@ class GenerationsClient:
     def list(
         self,
         *,
-        status: typing.Optional[GenerationStatus] = None,
+        status: typing.Optional[typing.Sequence[GenerationStatus]] = None,
+        ids: typing.Optional[typing.Sequence[str]] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> typing.List[Generation]:
         """
         Parameters
         ----------
-        status : typing.Optional[GenerationStatus]
-            Filter generations by status
+        status : typing.Optional[typing.Sequence[GenerationStatus]]
+            Filter generations by status. Accepts multiple statuses as a comma-separated list.
+
+        ids : typing.Optional[typing.Sequence[str]]
+            Filter generations by ID. Accepts multiple IDs as a comma-separated list.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -225,7 +229,7 @@ class GenerationsClient:
         )
         client.generations.list()
         """
-        response = self._raw_client.list(status=status, request_options=request_options)
+        response = self._raw_client.list(status=status, ids=ids, request_options=request_options)
         return response.data
 
     def estimate_cost(
@@ -506,14 +510,18 @@ class AsyncGenerationsClient:
     async def list(
         self,
         *,
-        status: typing.Optional[GenerationStatus] = None,
+        status: typing.Optional[typing.Sequence[GenerationStatus]] = None,
+        ids: typing.Optional[typing.Sequence[str]] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> typing.List[Generation]:
         """
         Parameters
         ----------
-        status : typing.Optional[GenerationStatus]
-            Filter generations by status
+        status : typing.Optional[typing.Sequence[GenerationStatus]]
+            Filter generations by status. Accepts multiple statuses as a comma-separated list.
+
+        ids : typing.Optional[typing.Sequence[str]]
+            Filter generations by ID. Accepts multiple IDs as a comma-separated list.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -540,7 +548,7 @@ class AsyncGenerationsClient:
 
         asyncio.run(main())
         """
-        response = await self._raw_client.list(status=status, request_options=request_options)
+        response = await self._raw_client.list(status=status, ids=ids, request_options=request_options)
         return response.data
 
     async def estimate_cost(

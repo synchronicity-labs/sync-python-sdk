@@ -306,14 +306,18 @@ class RawGenerationsClient:
     def list(
         self,
         *,
-        status: typing.Optional[GenerationStatus] = None,
+        status: typing.Optional[typing.Sequence[GenerationStatus]] = None,
+        ids: typing.Optional[typing.Sequence[str]] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[typing.List[Generation]]:
         """
         Parameters
         ----------
-        status : typing.Optional[GenerationStatus]
-            Filter generations by status
+        status : typing.Optional[typing.Sequence[GenerationStatus]]
+            Filter generations by status. Accepts multiple statuses as a comma-separated list.
+
+        ids : typing.Optional[typing.Sequence[str]]
+            Filter generations by ID. Accepts multiple IDs as a comma-separated list.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -328,6 +332,7 @@ class RawGenerationsClient:
             method="GET",
             params={
                 "status": status,
+                "ids": ids,
             },
             request_options=request_options,
         )
@@ -738,14 +743,18 @@ class AsyncRawGenerationsClient:
     async def list(
         self,
         *,
-        status: typing.Optional[GenerationStatus] = None,
+        status: typing.Optional[typing.Sequence[GenerationStatus]] = None,
+        ids: typing.Optional[typing.Sequence[str]] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[typing.List[Generation]]:
         """
         Parameters
         ----------
-        status : typing.Optional[GenerationStatus]
-            Filter generations by status
+        status : typing.Optional[typing.Sequence[GenerationStatus]]
+            Filter generations by status. Accepts multiple statuses as a comma-separated list.
+
+        ids : typing.Optional[typing.Sequence[str]]
+            Filter generations by ID. Accepts multiple IDs as a comma-separated list.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -760,6 +769,7 @@ class AsyncRawGenerationsClient:
             method="GET",
             params={
                 "status": status,
+                "ids": ids,
             },
             request_options=request_options,
         )
