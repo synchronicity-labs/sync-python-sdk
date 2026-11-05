@@ -3,5 +3,20 @@
 import typing
 
 AssetInputType = typing.Union[
-    typing.Literal["UPLOAD", "URL", "RECORD", "TTS", "EXTRACT", "PLATFORM_IMPORT"], typing.Any
+    typing.Literal[
+        "UPLOAD",
+        "URL",
+        "RECORD",
+        "TTS",
+        "EXTRACT",
+        "DUB",
+        "DUB_SOURCE",
+        "PLATFORM_IMPORT",
+        "DIALOGUE_EDIT",
+        "PLUGIN_PREMIERE_FILE",
+        "PLUGIN_PREMIERE_TIMELINE_SELECTION",
+        "PLUGIN_RESOLVE_FILE",
+        "PLUGIN_RESOLVE_TIMELINE_SELECTION",
+    ],
+    typing.Any,
 ]

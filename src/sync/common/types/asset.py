@@ -10,6 +10,7 @@ import typing
 from .asset_type import AssetType
 from .asset_input_type import AssetInputType
 from .asset_visibility import AssetVisibility
+from .project_id import ProjectId
 from ...core.pydantic_utilities import IS_PYDANTIC_V2
 
 
@@ -88,6 +89,20 @@ class Asset(UncheckedBaseModel):
     height: typing.Optional[int] = pydantic.Field(default=None)
     """
     Height in pixels (for video/image).
+    """
+
+    project_id: typing_extensions.Annotated[typing.Optional[ProjectId], FieldMetadata(alias="projectId")] = (
+        pydantic.Field(default=None)
+    )
+    """
+    The id of the project this asset is attached to, or null when it belongs to no project.
+    """
+
+    proxy_path: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="proxyPath")] = pydantic.Field(
+        default=None
+    )
+    """
+    Stable API proxy path for authenticated media playback.
     """
 
     if IS_PYDANTIC_V2:

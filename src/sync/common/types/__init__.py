@@ -6,38 +6,124 @@ from .asset_id import AssetId
 from .asset_input_type import AssetInputType
 from .asset_sort import AssetSort
 from .asset_type import AssetType
+from .asset_upload_response import AssetUploadResponse
 from .asset_visibility import AssetVisibility
+from .attach_project_asset_request import AttachProjectAssetRequest
 from .audio import Audio
+from .batch_concurrency_error import BatchConcurrencyError
 from .batch_id import BatchId
 from .batch_metrics import BatchMetrics
 from .batch_response import BatchResponse
+from .batch_row import BatchRow
 from .batch_status import BatchStatus
+from .blending_mode import BlendingMode
+from .cloned_voice_response import ClonedVoiceResponse
+from .create_asset_request import CreateAssetRequest
+from .create_asset_upload_request import CreateAssetUploadRequest
 from .create_batch_response import CreateBatchResponse
+from .create_dialogue_edit_dto import CreateDialogueEditDto
 from .create_generation_dto import CreateGenerationDto
+from .create_project_request import CreateProjectRequest
+from .create_transcription_dto import CreateTranscriptionDto
+from .create_tts_request import CreateTtsRequest
+from .create_voice_request import CreateVoiceRequest
+from .creator_workflow import CreatorWorkflow
+from .delete_asset_response import DeleteAssetResponse
+from .delete_project_response import DeleteProjectResponse
+from .dialogue_edit_change import DialogueEditChange
+from .dialogue_edit_error import DialogueEditError
+from .dialogue_edit_error_code import DialogueEditErrorCode
+from .dialogue_edit_failed_slot import DialogueEditFailedSlot
+from .dialogue_edit_job import DialogueEditJob
+from .dialogue_edit_job_id import DialogueEditJobId
+from .dialogue_edit_job_status import DialogueEditJobStatus
+from .dialogue_edit_operation import DialogueEditOperation, DialogueEditOperation_Change, DialogueEditOperation_Remove
+from .dialogue_edit_partial_detail import DialogueEditPartialDetail
+from .dialogue_edit_reference import DialogueEditReference
+from .dialogue_edit_removal import DialogueEditRemoval
+from .dialogue_edit_result_slot import DialogueEditResultSlot
+from .dialogue_edit_result_slot_kind import DialogueEditResultSlotKind
+from .dialogue_edit_retime_failure_section import DialogueEditRetimeFailureSection
+from .dub_dto import DubDto
+from .dub_language import DubLanguage
+from .dub_provider_name import DubProviderName
+from .dub_source_language import DubSourceLanguage
 from .eleven_labs import ElevenLabs
 from .emotion import Emotion
+from .error_catalog_entry import ErrorCatalogEntry
+from .estimate_breakdown import EstimateBreakdown
+from .estimate_cost_request import EstimateCostRequest
+from .estimate_dubbing_billing import EstimateDubbingBilling
+from .estimate_dubbing_part import EstimateDubbingPart
+from .estimate_duration_check import EstimateDurationCheck
+from .estimate_lipsync_part import EstimateLipsyncPart
+from .estimate_workflow import EstimateWorkflow
 from .estimated_generation_cost import EstimatedGenerationCost
 from .generation import Generation
+from .generation_concurrency_error import GenerationConcurrencyError
 from .generation_error import GenerationError
 from .generation_error_message import GenerationErrorMessage
+from .generation_estimate import GenerationEstimate
+from .generation_estimate_confidence import GenerationEstimateConfidence
+from .generation_estimate_resolution_source import GenerationEstimateResolutionSource
+from .generation_estimate_scope import GenerationEstimateScope
+from .generation_estimate_source import GenerationEstimateSource
 from .generation_id import GenerationId
 from .generation_options import GenerationOptions
 from .generation_segment import GenerationSegment
 from .generation_status import GenerationStatus
+from .image import Image
 from .input import Input
 from .model import Model
 from .model_info import ModelInfo
 from .model_mode import ModelMode
-from .model_type import ModelType
+from .output_audio import OutputAudio
+from .output_format import OutputFormat
 from .paginated_assets_response import PaginatedAssetsResponse
+from .paginated_projects_response import PaginatedProjectsResponse
+from .project import Project
+from .project_generation import ProjectGeneration
+from .project_generation_error import ProjectGenerationError
+from .project_generation_input import ProjectGenerationInput
+from .project_generation_model import ProjectGenerationModel
+from .project_generation_provider import ProjectGenerationProvider
+from .project_generation_segment import ProjectGenerationSegment
+from .project_id import ProjectId
+from .project_list_item import ProjectListItem
+from .project_mode import ProjectMode
+from .project_sort import ProjectSort
+from .project_visibility import ProjectVisibility
 from .segment_audio_input import SegmentAudioInput
 from .segment_frames import SegmentFrames
+from .segment_options_override import SegmentOptionsOverride
 from .segment_secs import SegmentSecs
 from .sync_mode import SyncMode
+from .transcript import Transcript
+from .transcript_segment import TranscriptSegment
+from .transcript_word import TranscriptWord
+from .transcription_difficulty import TranscriptionDifficulty
+from .transcription_difficulty_reason import TranscriptionDifficultyReason
+from .transcription_difficulty_tier import TranscriptionDifficultyTier
+from .transcription_error import TranscriptionError
+from .transcription_error_code import TranscriptionErrorCode
+from .transcription_job import TranscriptionJob
+from .transcription_job_id import TranscriptionJobId
+from .transcription_job_status import TranscriptionJobStatus
 from .tts import Tts
+from .tts_generation_response import TtsGenerationResponse
+from .tts_job import TtsJob
+from .tts_job_error import TtsJobError
+from .tts_job_error_code import TtsJobErrorCode
+from .tts_job_status import TtsJobStatus
 from .tts_provider_config import TtsProviderConfig
+from .update_asset_request import UpdateAssetRequest
+from .update_project_request import UpdateProjectRequest
 from .validation_response import ValidationResponse
 from .video import Video
+from .voice import Voice
+from .voice_clone_rate_limit_error import VoiceCloneRateLimitError
+from .voice_provider import VoiceProvider
+from .voice_restriction import VoiceRestriction
 
 __all__ = [
     "ActiveSpeaker",
@@ -46,36 +132,124 @@ __all__ = [
     "AssetInputType",
     "AssetSort",
     "AssetType",
+    "AssetUploadResponse",
     "AssetVisibility",
+    "AttachProjectAssetRequest",
     "Audio",
+    "BatchConcurrencyError",
     "BatchId",
     "BatchMetrics",
     "BatchResponse",
+    "BatchRow",
     "BatchStatus",
+    "BlendingMode",
+    "ClonedVoiceResponse",
+    "CreateAssetRequest",
+    "CreateAssetUploadRequest",
     "CreateBatchResponse",
+    "CreateDialogueEditDto",
     "CreateGenerationDto",
+    "CreateProjectRequest",
+    "CreateTranscriptionDto",
+    "CreateTtsRequest",
+    "CreateVoiceRequest",
+    "CreatorWorkflow",
+    "DeleteAssetResponse",
+    "DeleteProjectResponse",
+    "DialogueEditChange",
+    "DialogueEditError",
+    "DialogueEditErrorCode",
+    "DialogueEditFailedSlot",
+    "DialogueEditJob",
+    "DialogueEditJobId",
+    "DialogueEditJobStatus",
+    "DialogueEditOperation",
+    "DialogueEditOperation_Change",
+    "DialogueEditOperation_Remove",
+    "DialogueEditPartialDetail",
+    "DialogueEditReference",
+    "DialogueEditRemoval",
+    "DialogueEditResultSlot",
+    "DialogueEditResultSlotKind",
+    "DialogueEditRetimeFailureSection",
+    "DubDto",
+    "DubLanguage",
+    "DubProviderName",
+    "DubSourceLanguage",
     "ElevenLabs",
     "Emotion",
+    "ErrorCatalogEntry",
+    "EstimateBreakdown",
+    "EstimateCostRequest",
+    "EstimateDubbingBilling",
+    "EstimateDubbingPart",
+    "EstimateDurationCheck",
+    "EstimateLipsyncPart",
+    "EstimateWorkflow",
     "EstimatedGenerationCost",
     "Generation",
+    "GenerationConcurrencyError",
     "GenerationError",
     "GenerationErrorMessage",
+    "GenerationEstimate",
+    "GenerationEstimateConfidence",
+    "GenerationEstimateResolutionSource",
+    "GenerationEstimateScope",
+    "GenerationEstimateSource",
     "GenerationId",
     "GenerationOptions",
     "GenerationSegment",
     "GenerationStatus",
+    "Image",
     "Input",
     "Model",
     "ModelInfo",
     "ModelMode",
-    "ModelType",
+    "OutputAudio",
+    "OutputFormat",
     "PaginatedAssetsResponse",
+    "PaginatedProjectsResponse",
+    "Project",
+    "ProjectGeneration",
+    "ProjectGenerationError",
+    "ProjectGenerationInput",
+    "ProjectGenerationModel",
+    "ProjectGenerationProvider",
+    "ProjectGenerationSegment",
+    "ProjectId",
+    "ProjectListItem",
+    "ProjectMode",
+    "ProjectSort",
+    "ProjectVisibility",
     "SegmentAudioInput",
     "SegmentFrames",
+    "SegmentOptionsOverride",
     "SegmentSecs",
     "SyncMode",
+    "Transcript",
+    "TranscriptSegment",
+    "TranscriptWord",
+    "TranscriptionDifficulty",
+    "TranscriptionDifficultyReason",
+    "TranscriptionDifficultyTier",
+    "TranscriptionError",
+    "TranscriptionErrorCode",
+    "TranscriptionJob",
+    "TranscriptionJobId",
+    "TranscriptionJobStatus",
     "Tts",
+    "TtsGenerationResponse",
+    "TtsJob",
+    "TtsJobError",
+    "TtsJobErrorCode",
+    "TtsJobStatus",
     "TtsProviderConfig",
+    "UpdateAssetRequest",
+    "UpdateProjectRequest",
     "ValidationResponse",
     "Video",
+    "Voice",
+    "VoiceCloneRateLimitError",
+    "VoiceProvider",
+    "VoiceRestriction",
 ]

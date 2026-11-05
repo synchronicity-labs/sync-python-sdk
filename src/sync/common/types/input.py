@@ -2,7 +2,8 @@
 
 import typing
 from .video import Video
+from .image import Image
 from .audio import Audio
 from .tts import Tts
 
-Input = typing.Union[Video, Audio, Tts]
+Input = typing.Union[Video, Image, Audio, Tts]

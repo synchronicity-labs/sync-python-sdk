@@ -5,15 +5,16 @@ import typing
 from .sync_mode import SyncMode
 import pydantic
 from .model_mode import ModelMode
-from .emotion import Emotion
 from .active_speaker import ActiveSpeaker
+from .blending_mode import BlendingMode
+from .output_format import OutputFormat
 from ...core.pydantic_utilities import IS_PYDANTIC_V2
 
 
 class GenerationOptions(UncheckedBaseModel):
     sync_mode: typing.Optional[SyncMode] = pydantic.Field(default=None)
     """
-    Defines how to handle duration mismatches between video and audio inputs. See the [Media Content Tips](/compatibility-and-tips/media-content-tips#sync-mode-options) guide for a brief overview,  or the SyncMode enum below for detailed explanations of each option.
+    Defines how to handle duration mismatches between video and audio inputs. Ignored for image inputs (images have no intrinsic duration). See the [Sync Mode](/developer-guides/sync-mode) guide for the full behavior matrix.
     """
 
     model_mode: typing.Optional[ModelMode] = pydantic.Field(default=None)
@@ -21,9 +22,19 @@ class GenerationOptions(UncheckedBaseModel):
     edit region for the model. only works with react-1. defaults to face, which affects lipsync + emotions in the face region. Available options are lips/face/head. When head is selected, model generates natural talking head movements along with emotions + lipsync.
     """
 
-    prompt: typing.Optional[Emotion] = pydantic.Field(default=None)
+    prompt: typing.Optional[str] = pydantic.Field(default=None)
     """
-    emotion prompt for the generation. only works for react-1 model. Only single word emotions are supported at the moment.
+    Prompt for the generation. React-1 accepts emotion prompts; the appearance model accepts a free-form appearance edit instruction.
+    """
+
+    prompt_image_uris: typing.Optional[typing.List[str]] = pydantic.Field(default=None)
+    """
+    Reference image URLs for appearance editing generations.
+    """
+
+    i2v_prompt: typing.Optional[str] = pydantic.Field(default=None)
+    """
+    Prompt for image-to-video generation.
     """
 
     temperature: typing.Optional[float] = pydantic.Field(default=None)
@@ -33,12 +44,47 @@ class GenerationOptions(UncheckedBaseModel):
 
     active_speaker_detection: typing.Optional[ActiveSpeaker] = pydantic.Field(default=None)
     """
-    Active speaker detection configuration. When enabled, automatically detects and applies lipsync only to the active speaker in videos with multiple people.
+    Active speaker detection configuration. When enabled, automatically detects and applies lipsync only to the active speaker in videos with multiple people. Not supported for image inputs.
     """
 
     occlusion_detection_enabled: typing.Optional[bool] = pydantic.Field(default=None)
     """
     Whether to detect occlusion during generation, slows down generation speed.
+    """
+
+    face_boxes_url: typing.Optional[str] = pydantic.Field(default=None)
+    """
+    URL for precomputed face bounding boxes.
+    """
+
+    reasoning_enabled: typing.Optional[bool] = pydantic.Field(default=None)
+    """
+    Whether to analyze and correct frames with artifacts, occlusions, or extreme poses during generation; slows down generation. Supported on lipsync-2-pro; sync-3 has it built in. See [lipsync models](/models/lipsync).
+    """
+
+    refinement_enabled: typing.Optional[bool] = pydantic.Field(default=None)
+    """
+    Whether to enable the refinement pass for the generation.
+    """
+
+    blending_mode: typing.Optional[BlendingMode] = pydantic.Field(default=None)
+    """
+    Controls how generated frames blend into the source media.
+    """
+
+    output_format: typing.Optional[OutputFormat] = pydantic.Field(default=None)
+    """
+    Deprecated output container setting; defaults to mp4.
+    """
+
+    fps: typing.Optional[float] = pydantic.Field(default=None)
+    """
+    Deprecated output frame-rate setting.
+    """
+
+    output_resolution: typing.Optional[typing.List[float]] = pydantic.Field(default=None)
+    """
+    Deprecated output resolution setting, as exactly [width, height]. Each value must be finite and between 180 and 4096 inclusive. Invalid values are discarded and the option is treated as omitted.
     """
 
     if IS_PYDANTIC_V2:

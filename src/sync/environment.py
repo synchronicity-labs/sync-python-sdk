@@ -6,3 +6,4 @@ import enum
 class SyncEnvironment(enum.Enum):
     DEFAULT = "https://api.sync.so"
     DEV = "https://dev-api.sync.so"
+    LOCAL = "http://localhost:3001"

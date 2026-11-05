@@ -33,12 +33,12 @@ class BatchResponse(UncheckedBaseModel):
         default=None
     )
     """
-    The webhook URL for batch status notifications.
+    The webhook URL for batch status notifications. Deliveries include a Sync-Signature header signed with the organization webhook secret.
     """
 
     output_url: typing_extensions.Annotated[str, FieldMetadata(alias="outputUrl")] = pydantic.Field()
     """
-    The URL to download the batch results file (available when completed).
+    The URL to download the batch results file when completed. A GET request follows a 302 redirect to a signed JSONL result URL.
     """
 
     if IS_PYDANTIC_V2:

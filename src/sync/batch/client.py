@@ -6,6 +6,7 @@ from .raw_client import RawBatchClient
 from .. import core
 from ..core.request_options import RequestOptions
 from ..common.types.create_batch_response import CreateBatchResponse
+from ..common.types.batch_row import BatchRow
 from ..common.types.batch_id import BatchId
 from ..common.types.batch_response import BatchResponse
 from ..common.types.batch_status import BatchStatus
@@ -41,7 +42,7 @@ class BatchClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> CreateBatchResponse:
         """
-        API for [Batch Processing](/api-reference/guides/batch-processing). Available only for `Scale` and `Enterprise` plans.
+        Create a batch processing job from a JSONL file. Requires a paid plan; free accounts get 402 `plan_feature_unavailable`. Send the file in multipart field `input` (or the accepted `file` alias); it must be 5 MB or smaller. On Scale and above a batch holds 20-500 records by default and is queued, holding one concurrency slot. Below Scale every record runs as a generation right away, so a batch holds 1 record up to your plan's concurrency limit: more records than that returns 400, and more records than your currently free generation slots returns 429 `concurrency_limit_reached`. Credit-billed plans reserve credits for the whole batch at submit and get 402 `insufficient_credits` when the balance is short. Each line must contain `request_id`, endpoint exactly `/v2/generate`, and a generation `payload`. To send the records as a JSON array instead of a file, use "Create Batch from Rows", the `application/json` form of the same endpoint. Errors name a refused record by its 1-based line, counting non-empty lines: dialogue edit refusals return it as `lineNumber`, other record errors only in `message`.
 
         Parameters
         ----------
@@ -49,10 +50,10 @@ class BatchClient:
             See core.File for more documentation
 
         webhook_url : typing.Optional[str]
-            Optional webhook URL to receive batch completion notifications. A POST request will be sent when the batch completes or fails.
+            Optional webhook URL to receive batch completion notifications. A POST request will be sent when the batch completes or fails, with a Sync-Signature header (`t=<unix>,v1=<hmac_sha256>`) signed with the organization webhook secret and a stable Sync-Delivery-Id header. Delivery is attempted up to six times over about two hours.
 
         dry_run : typing.Optional[bool]
-            When true, validates the input file without processing. Returns validation status without creating generations.
+            When true, validates the JSONL file and returns `{ "status": "VALIDATED" }` without creating a batch.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -75,6 +76,339 @@ class BatchClient:
         """
         response = self._raw_client.create(
             input=input, webhook_url=webhook_url, dry_run=dry_run, request_options=request_options
+        )
+        return response.data
+
+    def create_from_rows(
+        self,
+        *,
+        rows: typing.Sequence[BatchRow],
+        webhook_url: typing.Optional[str] = OMIT,
+        dry_run: typing.Optional[bool] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> CreateBatchResponse:
+        """
+        The `application/json` form of `POST /v2/batch`, the same endpoint as "Create Batch": send the records in a `rows` array instead of a JSONL file. Each row is the same object as one JSONL line and is validated the same way: 20-500 rows by default on Scale and above, 1 row up to your free generation slots below Scale, 5 MB or smaller when serialized as JSONL, unique `request_id` values, and endpoint exactly `/v2/generate`. Errors name a refused row by its line, where line N is `rows[N-1]`: dialogue edit refusals return it as `lineNumber`, other record errors only in `message`. Requires a paid plan. In early access, enabled per organization, a row's payload can carry `dialogueEdit` to render a completed preview from POST /v2/dialogue-edits: send one video input, the video the preview was made from, and no audio input. All dialogue edit rows in a batch must come from the same source video. Each row is expanded at submit into the request POST /v2/generate builds for that preview and is charged the same. A dialogue edit row that cannot be rendered refuses the whole batch with the `/v2/generate` errorCode (for example dialogue_edit_not_found, 422) and `lineNumber`. See [Batch Processing](/api-reference/guides/batch-processing).
+
+        Parameters
+        ----------
+        rows : typing.Sequence[BatchRow]
+            The batch records: 20-500 by default on Scale and above, 1 up to your free generation slots below Scale. Each row contains `request_id`, endpoint exactly `/v2/generate`, and a generation `payload`, as on a JSONL line.
+
+        webhook_url : typing.Optional[str]
+            Optional webhook URL to receive batch completion notifications. A POST request will be sent when the batch completes or fails, with a Sync-Signature header (`t=<unix>,v1=<hmac_sha256>`) signed with the organization webhook secret and a stable Sync-Delivery-Id header. Delivery is attempted up to six times over about two hours.
+
+        dry_run : typing.Optional[bool]
+            When true, validates the rows, including dialogue edit expansion, and returns `{ "status": "VALIDATED" }` without creating a batch.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        CreateBatchResponse
+
+        Examples
+        --------
+        from sync import Sync
+        from sync.common import (
+            BatchRow,
+            CreateGenerationDto,
+            DialogueEditReference,
+            Video,
+        )
+
+        client = Sync(
+            api_key="YOUR_API_KEY",
+        )
+        client.batch.create_from_rows(
+            rows=[
+                BatchRow(
+                    request_id="line-2",
+                    payload=CreateGenerationDto(
+                        model="sync-3",
+                        input=[
+                            Video(
+                                url="https://assets.sync.so/docs/example-video.mp4",
+                            )
+                        ],
+                        dialogue_edit=DialogueEditReference(
+                            id="fa350e8a-0c6b-50c3-96de-7e4ce81ed0ce",
+                        ),
+                    ),
+                ),
+                BatchRow(
+                    request_id="line-3",
+                    payload=CreateGenerationDto(
+                        model="sync-3",
+                        input=[
+                            Video(
+                                url="https://assets.sync.so/docs/example-video.mp4",
+                            )
+                        ],
+                        dialogue_edit=DialogueEditReference(
+                            id="ddaea593-cf1f-5916-aaef-c60ab5f63090",
+                        ),
+                    ),
+                ),
+                BatchRow(
+                    request_id="line-4",
+                    payload=CreateGenerationDto(
+                        model="sync-3",
+                        input=[
+                            Video(
+                                url="https://assets.sync.so/docs/example-video.mp4",
+                            )
+                        ],
+                        dialogue_edit=DialogueEditReference(
+                            id="532a08cd-becc-5630-8109-58d22206db7e",
+                        ),
+                    ),
+                ),
+                BatchRow(
+                    request_id="line-5",
+                    payload=CreateGenerationDto(
+                        model="sync-3",
+                        input=[
+                            Video(
+                                url="https://assets.sync.so/docs/example-video.mp4",
+                            )
+                        ],
+                        dialogue_edit=DialogueEditReference(
+                            id="68f897e5-78e3-55d3-9ca3-d8ba0d16c5c4",
+                        ),
+                    ),
+                ),
+                BatchRow(
+                    request_id="line-6",
+                    payload=CreateGenerationDto(
+                        model="sync-3",
+                        input=[
+                            Video(
+                                url="https://assets.sync.so/docs/example-video.mp4",
+                            )
+                        ],
+                        dialogue_edit=DialogueEditReference(
+                            id="f4aa2ca8-006d-5301-baf7-4ce543188328",
+                        ),
+                    ),
+                ),
+                BatchRow(
+                    request_id="line-7",
+                    payload=CreateGenerationDto(
+                        model="sync-3",
+                        input=[
+                            Video(
+                                url="https://assets.sync.so/docs/example-video.mp4",
+                            )
+                        ],
+                        dialogue_edit=DialogueEditReference(
+                            id="636f1dd4-f4e1-508d-8cdd-6dac1dd002a3",
+                        ),
+                    ),
+                ),
+                BatchRow(
+                    request_id="line-8",
+                    payload=CreateGenerationDto(
+                        model="sync-3",
+                        input=[
+                            Video(
+                                url="https://assets.sync.so/docs/example-video.mp4",
+                            )
+                        ],
+                        dialogue_edit=DialogueEditReference(
+                            id="8f6640f5-6139-5271-ab33-f43fc91fc1ad",
+                        ),
+                    ),
+                ),
+                BatchRow(
+                    request_id="line-9",
+                    payload=CreateGenerationDto(
+                        model="sync-3",
+                        input=[
+                            Video(
+                                url="https://assets.sync.so/docs/example-video.mp4",
+                            )
+                        ],
+                        dialogue_edit=DialogueEditReference(
+                            id="6c101a02-cdd8-5ec0-9df9-1ffea33a11bd",
+                        ),
+                    ),
+                ),
+                BatchRow(
+                    request_id="line-10",
+                    payload=CreateGenerationDto(
+                        model="sync-3",
+                        input=[
+                            Video(
+                                url="https://assets.sync.so/docs/example-video.mp4",
+                            )
+                        ],
+                        dialogue_edit=DialogueEditReference(
+                            id="258f60c2-b635-5ab6-a565-ae81a709e221",
+                        ),
+                    ),
+                ),
+                BatchRow(
+                    request_id="line-11",
+                    payload=CreateGenerationDto(
+                        model="sync-3",
+                        input=[
+                            Video(
+                                url="https://assets.sync.so/docs/example-video.mp4",
+                            )
+                        ],
+                        dialogue_edit=DialogueEditReference(
+                            id="09dc425b-4d7e-5813-8c6c-81bd38993a7b",
+                        ),
+                    ),
+                ),
+                BatchRow(
+                    request_id="line-12",
+                    payload=CreateGenerationDto(
+                        model="sync-3",
+                        input=[
+                            Video(
+                                url="https://assets.sync.so/docs/example-video.mp4",
+                            )
+                        ],
+                        dialogue_edit=DialogueEditReference(
+                            id="b93c54d3-28d6-5fa3-abaf-5220c38e31a1",
+                        ),
+                    ),
+                ),
+                BatchRow(
+                    request_id="line-13",
+                    payload=CreateGenerationDto(
+                        model="sync-3",
+                        input=[
+                            Video(
+                                url="https://assets.sync.so/docs/example-video.mp4",
+                            )
+                        ],
+                        dialogue_edit=DialogueEditReference(
+                            id="e8a1dea0-b3f9-5266-badd-f8a2aae77ea3",
+                        ),
+                    ),
+                ),
+                BatchRow(
+                    request_id="line-14",
+                    payload=CreateGenerationDto(
+                        model="sync-3",
+                        input=[
+                            Video(
+                                url="https://assets.sync.so/docs/example-video.mp4",
+                            )
+                        ],
+                        dialogue_edit=DialogueEditReference(
+                            id="a09967c4-8171-582f-8dba-1ba07d55f918",
+                        ),
+                    ),
+                ),
+                BatchRow(
+                    request_id="line-15",
+                    payload=CreateGenerationDto(
+                        model="sync-3",
+                        input=[
+                            Video(
+                                url="https://assets.sync.so/docs/example-video.mp4",
+                            )
+                        ],
+                        dialogue_edit=DialogueEditReference(
+                            id="39df4e4f-b23d-54ca-99a8-f29ec567790b",
+                        ),
+                    ),
+                ),
+                BatchRow(
+                    request_id="line-16",
+                    payload=CreateGenerationDto(
+                        model="sync-3",
+                        input=[
+                            Video(
+                                url="https://assets.sync.so/docs/example-video.mp4",
+                            )
+                        ],
+                        dialogue_edit=DialogueEditReference(
+                            id="0370783a-12d5-5dfb-8736-49118428df47",
+                        ),
+                    ),
+                ),
+                BatchRow(
+                    request_id="line-17",
+                    payload=CreateGenerationDto(
+                        model="sync-3",
+                        input=[
+                            Video(
+                                url="https://assets.sync.so/docs/example-video.mp4",
+                            )
+                        ],
+                        dialogue_edit=DialogueEditReference(
+                            id="a65eecc2-ad79-5123-acf7-e81a57b2422f",
+                        ),
+                    ),
+                ),
+                BatchRow(
+                    request_id="line-18",
+                    payload=CreateGenerationDto(
+                        model="sync-3",
+                        input=[
+                            Video(
+                                url="https://assets.sync.so/docs/example-video.mp4",
+                            )
+                        ],
+                        dialogue_edit=DialogueEditReference(
+                            id="a0200ef6-d140-50bb-9784-3b9e265be374",
+                        ),
+                    ),
+                ),
+                BatchRow(
+                    request_id="line-19",
+                    payload=CreateGenerationDto(
+                        model="sync-3",
+                        input=[
+                            Video(
+                                url="https://assets.sync.so/docs/example-video.mp4",
+                            )
+                        ],
+                        dialogue_edit=DialogueEditReference(
+                            id="06cc754a-b625-58c2-ad2d-74ec08fb517a",
+                        ),
+                    ),
+                ),
+                BatchRow(
+                    request_id="line-20",
+                    payload=CreateGenerationDto(
+                        model="sync-3",
+                        input=[
+                            Video(
+                                url="https://assets.sync.so/docs/example-video.mp4",
+                            )
+                        ],
+                        dialogue_edit=DialogueEditReference(
+                            id="32889341-cc9e-59c6-b18a-32bbb525c26e",
+                        ),
+                    ),
+                ),
+                BatchRow(
+                    request_id="line-21",
+                    payload=CreateGenerationDto(
+                        model="sync-3",
+                        input=[
+                            Video(
+                                url="https://assets.sync.so/docs/example-video.mp4",
+                            )
+                        ],
+                        dialogue_edit=DialogueEditReference(
+                            id="f6568dbc-0390-5227-b107-64c3842adb3b",
+                        ),
+                    ),
+                ),
+            ],
+            dry_run=True,
+        )
+        """
+        response = self._raw_client.create_from_rows(
+            rows=rows, webhook_url=webhook_url, dry_run=dry_run, request_options=request_options
         )
         return response.data
 
@@ -176,7 +510,7 @@ class AsyncBatchClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> CreateBatchResponse:
         """
-        API for [Batch Processing](/api-reference/guides/batch-processing). Available only for `Scale` and `Enterprise` plans.
+        Create a batch processing job from a JSONL file. Requires a paid plan; free accounts get 402 `plan_feature_unavailable`. Send the file in multipart field `input` (or the accepted `file` alias); it must be 5 MB or smaller. On Scale and above a batch holds 20-500 records by default and is queued, holding one concurrency slot. Below Scale every record runs as a generation right away, so a batch holds 1 record up to your plan's concurrency limit: more records than that returns 400, and more records than your currently free generation slots returns 429 `concurrency_limit_reached`. Credit-billed plans reserve credits for the whole batch at submit and get 402 `insufficient_credits` when the balance is short. Each line must contain `request_id`, endpoint exactly `/v2/generate`, and a generation `payload`. To send the records as a JSON array instead of a file, use "Create Batch from Rows", the `application/json` form of the same endpoint. Errors name a refused record by its 1-based line, counting non-empty lines: dialogue edit refusals return it as `lineNumber`, other record errors only in `message`.
 
         Parameters
         ----------
@@ -184,10 +518,10 @@ class AsyncBatchClient:
             See core.File for more documentation
 
         webhook_url : typing.Optional[str]
-            Optional webhook URL to receive batch completion notifications. A POST request will be sent when the batch completes or fails.
+            Optional webhook URL to receive batch completion notifications. A POST request will be sent when the batch completes or fails, with a Sync-Signature header (`t=<unix>,v1=<hmac_sha256>`) signed with the organization webhook secret and a stable Sync-Delivery-Id header. Delivery is attempted up to six times over about two hours.
 
         dry_run : typing.Optional[bool]
-            When true, validates the input file without processing. Returns validation status without creating generations.
+            When true, validates the JSONL file and returns `{ "status": "VALIDATED" }` without creating a batch.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -218,6 +552,347 @@ class AsyncBatchClient:
         """
         response = await self._raw_client.create(
             input=input, webhook_url=webhook_url, dry_run=dry_run, request_options=request_options
+        )
+        return response.data
+
+    async def create_from_rows(
+        self,
+        *,
+        rows: typing.Sequence[BatchRow],
+        webhook_url: typing.Optional[str] = OMIT,
+        dry_run: typing.Optional[bool] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> CreateBatchResponse:
+        """
+        The `application/json` form of `POST /v2/batch`, the same endpoint as "Create Batch": send the records in a `rows` array instead of a JSONL file. Each row is the same object as one JSONL line and is validated the same way: 20-500 rows by default on Scale and above, 1 row up to your free generation slots below Scale, 5 MB or smaller when serialized as JSONL, unique `request_id` values, and endpoint exactly `/v2/generate`. Errors name a refused row by its line, where line N is `rows[N-1]`: dialogue edit refusals return it as `lineNumber`, other record errors only in `message`. Requires a paid plan. In early access, enabled per organization, a row's payload can carry `dialogueEdit` to render a completed preview from POST /v2/dialogue-edits: send one video input, the video the preview was made from, and no audio input. All dialogue edit rows in a batch must come from the same source video. Each row is expanded at submit into the request POST /v2/generate builds for that preview and is charged the same. A dialogue edit row that cannot be rendered refuses the whole batch with the `/v2/generate` errorCode (for example dialogue_edit_not_found, 422) and `lineNumber`. See [Batch Processing](/api-reference/guides/batch-processing).
+
+        Parameters
+        ----------
+        rows : typing.Sequence[BatchRow]
+            The batch records: 20-500 by default on Scale and above, 1 up to your free generation slots below Scale. Each row contains `request_id`, endpoint exactly `/v2/generate`, and a generation `payload`, as on a JSONL line.
+
+        webhook_url : typing.Optional[str]
+            Optional webhook URL to receive batch completion notifications. A POST request will be sent when the batch completes or fails, with a Sync-Signature header (`t=<unix>,v1=<hmac_sha256>`) signed with the organization webhook secret and a stable Sync-Delivery-Id header. Delivery is attempted up to six times over about two hours.
+
+        dry_run : typing.Optional[bool]
+            When true, validates the rows, including dialogue edit expansion, and returns `{ "status": "VALIDATED" }` without creating a batch.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        CreateBatchResponse
+
+        Examples
+        --------
+        import asyncio
+
+        from sync import AsyncSync
+        from sync.common import (
+            BatchRow,
+            CreateGenerationDto,
+            DialogueEditReference,
+            Video,
+        )
+
+        client = AsyncSync(
+            api_key="YOUR_API_KEY",
+        )
+
+
+        async def main() -> None:
+            await client.batch.create_from_rows(
+                rows=[
+                    BatchRow(
+                        request_id="line-2",
+                        payload=CreateGenerationDto(
+                            model="sync-3",
+                            input=[
+                                Video(
+                                    url="https://assets.sync.so/docs/example-video.mp4",
+                                )
+                            ],
+                            dialogue_edit=DialogueEditReference(
+                                id="fa350e8a-0c6b-50c3-96de-7e4ce81ed0ce",
+                            ),
+                        ),
+                    ),
+                    BatchRow(
+                        request_id="line-3",
+                        payload=CreateGenerationDto(
+                            model="sync-3",
+                            input=[
+                                Video(
+                                    url="https://assets.sync.so/docs/example-video.mp4",
+                                )
+                            ],
+                            dialogue_edit=DialogueEditReference(
+                                id="ddaea593-cf1f-5916-aaef-c60ab5f63090",
+                            ),
+                        ),
+                    ),
+                    BatchRow(
+                        request_id="line-4",
+                        payload=CreateGenerationDto(
+                            model="sync-3",
+                            input=[
+                                Video(
+                                    url="https://assets.sync.so/docs/example-video.mp4",
+                                )
+                            ],
+                            dialogue_edit=DialogueEditReference(
+                                id="532a08cd-becc-5630-8109-58d22206db7e",
+                            ),
+                        ),
+                    ),
+                    BatchRow(
+                        request_id="line-5",
+                        payload=CreateGenerationDto(
+                            model="sync-3",
+                            input=[
+                                Video(
+                                    url="https://assets.sync.so/docs/example-video.mp4",
+                                )
+                            ],
+                            dialogue_edit=DialogueEditReference(
+                                id="68f897e5-78e3-55d3-9ca3-d8ba0d16c5c4",
+                            ),
+                        ),
+                    ),
+                    BatchRow(
+                        request_id="line-6",
+                        payload=CreateGenerationDto(
+                            model="sync-3",
+                            input=[
+                                Video(
+                                    url="https://assets.sync.so/docs/example-video.mp4",
+                                )
+                            ],
+                            dialogue_edit=DialogueEditReference(
+                                id="f4aa2ca8-006d-5301-baf7-4ce543188328",
+                            ),
+                        ),
+                    ),
+                    BatchRow(
+                        request_id="line-7",
+                        payload=CreateGenerationDto(
+                            model="sync-3",
+                            input=[
+                                Video(
+                                    url="https://assets.sync.so/docs/example-video.mp4",
+                                )
+                            ],
+                            dialogue_edit=DialogueEditReference(
+                                id="636f1dd4-f4e1-508d-8cdd-6dac1dd002a3",
+                            ),
+                        ),
+                    ),
+                    BatchRow(
+                        request_id="line-8",
+                        payload=CreateGenerationDto(
+                            model="sync-3",
+                            input=[
+                                Video(
+                                    url="https://assets.sync.so/docs/example-video.mp4",
+                                )
+                            ],
+                            dialogue_edit=DialogueEditReference(
+                                id="8f6640f5-6139-5271-ab33-f43fc91fc1ad",
+                            ),
+                        ),
+                    ),
+                    BatchRow(
+                        request_id="line-9",
+                        payload=CreateGenerationDto(
+                            model="sync-3",
+                            input=[
+                                Video(
+                                    url="https://assets.sync.so/docs/example-video.mp4",
+                                )
+                            ],
+                            dialogue_edit=DialogueEditReference(
+                                id="6c101a02-cdd8-5ec0-9df9-1ffea33a11bd",
+                            ),
+                        ),
+                    ),
+                    BatchRow(
+                        request_id="line-10",
+                        payload=CreateGenerationDto(
+                            model="sync-3",
+                            input=[
+                                Video(
+                                    url="https://assets.sync.so/docs/example-video.mp4",
+                                )
+                            ],
+                            dialogue_edit=DialogueEditReference(
+                                id="258f60c2-b635-5ab6-a565-ae81a709e221",
+                            ),
+                        ),
+                    ),
+                    BatchRow(
+                        request_id="line-11",
+                        payload=CreateGenerationDto(
+                            model="sync-3",
+                            input=[
+                                Video(
+                                    url="https://assets.sync.so/docs/example-video.mp4",
+                                )
+                            ],
+                            dialogue_edit=DialogueEditReference(
+                                id="09dc425b-4d7e-5813-8c6c-81bd38993a7b",
+                            ),
+                        ),
+                    ),
+                    BatchRow(
+                        request_id="line-12",
+                        payload=CreateGenerationDto(
+                            model="sync-3",
+                            input=[
+                                Video(
+                                    url="https://assets.sync.so/docs/example-video.mp4",
+                                )
+                            ],
+                            dialogue_edit=DialogueEditReference(
+                                id="b93c54d3-28d6-5fa3-abaf-5220c38e31a1",
+                            ),
+                        ),
+                    ),
+                    BatchRow(
+                        request_id="line-13",
+                        payload=CreateGenerationDto(
+                            model="sync-3",
+                            input=[
+                                Video(
+                                    url="https://assets.sync.so/docs/example-video.mp4",
+                                )
+                            ],
+                            dialogue_edit=DialogueEditReference(
+                                id="e8a1dea0-b3f9-5266-badd-f8a2aae77ea3",
+                            ),
+                        ),
+                    ),
+                    BatchRow(
+                        request_id="line-14",
+                        payload=CreateGenerationDto(
+                            model="sync-3",
+                            input=[
+                                Video(
+                                    url="https://assets.sync.so/docs/example-video.mp4",
+                                )
+                            ],
+                            dialogue_edit=DialogueEditReference(
+                                id="a09967c4-8171-582f-8dba-1ba07d55f918",
+                            ),
+                        ),
+                    ),
+                    BatchRow(
+                        request_id="line-15",
+                        payload=CreateGenerationDto(
+                            model="sync-3",
+                            input=[
+                                Video(
+                                    url="https://assets.sync.so/docs/example-video.mp4",
+                                )
+                            ],
+                            dialogue_edit=DialogueEditReference(
+                                id="39df4e4f-b23d-54ca-99a8-f29ec567790b",
+                            ),
+                        ),
+                    ),
+                    BatchRow(
+                        request_id="line-16",
+                        payload=CreateGenerationDto(
+                            model="sync-3",
+                            input=[
+                                Video(
+                                    url="https://assets.sync.so/docs/example-video.mp4",
+                                )
+                            ],
+                            dialogue_edit=DialogueEditReference(
+                                id="0370783a-12d5-5dfb-8736-49118428df47",
+                            ),
+                        ),
+                    ),
+                    BatchRow(
+                        request_id="line-17",
+                        payload=CreateGenerationDto(
+                            model="sync-3",
+                            input=[
+                                Video(
+                                    url="https://assets.sync.so/docs/example-video.mp4",
+                                )
+                            ],
+                            dialogue_edit=DialogueEditReference(
+                                id="a65eecc2-ad79-5123-acf7-e81a57b2422f",
+                            ),
+                        ),
+                    ),
+                    BatchRow(
+                        request_id="line-18",
+                        payload=CreateGenerationDto(
+                            model="sync-3",
+                            input=[
+                                Video(
+                                    url="https://assets.sync.so/docs/example-video.mp4",
+                                )
+                            ],
+                            dialogue_edit=DialogueEditReference(
+                                id="a0200ef6-d140-50bb-9784-3b9e265be374",
+                            ),
+                        ),
+                    ),
+                    BatchRow(
+                        request_id="line-19",
+                        payload=CreateGenerationDto(
+                            model="sync-3",
+                            input=[
+                                Video(
+                                    url="https://assets.sync.so/docs/example-video.mp4",
+                                )
+                            ],
+                            dialogue_edit=DialogueEditReference(
+                                id="06cc754a-b625-58c2-ad2d-74ec08fb517a",
+                            ),
+                        ),
+                    ),
+                    BatchRow(
+                        request_id="line-20",
+                        payload=CreateGenerationDto(
+                            model="sync-3",
+                            input=[
+                                Video(
+                                    url="https://assets.sync.so/docs/example-video.mp4",
+                                )
+                            ],
+                            dialogue_edit=DialogueEditReference(
+                                id="32889341-cc9e-59c6-b18a-32bbb525c26e",
+                            ),
+                        ),
+                    ),
+                    BatchRow(
+                        request_id="line-21",
+                        payload=CreateGenerationDto(
+                            model="sync-3",
+                            input=[
+                                Video(
+                                    url="https://assets.sync.so/docs/example-video.mp4",
+                                )
+                            ],
+                            dialogue_edit=DialogueEditReference(
+                                id="f6568dbc-0390-5227-b107-64c3842adb3b",
+                            ),
+                        ),
+                    ),
+                ],
+                dry_run=True,
+            )
+
+
+        asyncio.run(main())
+        """
+        response = await self._raw_client.create_from_rows(
+            rows=rows, webhook_url=webhook_url, dry_run=dry_run, request_options=request_options
         )
         return response.data
 

@@ -2,7 +2,6 @@
 
 from ...core.unchecked_base_model import UncheckedBaseModel
 import pydantic
-from .model_type import ModelType
 import typing
 import typing_extensions
 import datetime as dt
@@ -25,7 +24,7 @@ class ModelInfo(UncheckedBaseModel):
     Model name (e.g., lipsync-2, react-1).
     """
 
-    type: ModelType = pydantic.Field()
+    type: str = pydantic.Field()
     """
     The type of model.
     """
@@ -38,6 +37,11 @@ class ModelInfo(UncheckedBaseModel):
     description: typing.Optional[str] = pydantic.Field(default=None)
     """
     Model description.
+    """
+
+    features: typing.Optional[typing.List[str]] = pydantic.Field(default=None)
+    """
+    Marketing feature tags for the model.
     """
 
     deprecated_at: typing_extensions.Annotated[typing.Optional[dt.datetime], FieldMetadata(alias="deprecatedAt")] = (

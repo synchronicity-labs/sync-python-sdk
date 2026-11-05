@@ -5,8 +5,10 @@ from .generation_error_message import GenerationErrorMessage
 import pydantic
 import typing_extensions
 from ...core.serialization import FieldMetadata
-from ...core.pydantic_utilities import IS_PYDANTIC_V2
 import typing
+from .generation_id import GenerationId
+from .dialogue_edit_retime_failure_section import DialogueEditRetimeFailureSection
+from ...core.pydantic_utilities import IS_PYDANTIC_V2
 
 
 class GenerationError(UncheckedBaseModel):
@@ -18,6 +20,58 @@ class GenerationError(UncheckedBaseModel):
     status_code: typing_extensions.Annotated[float, FieldMetadata(alias="statusCode")] = pydantic.Field()
     """
     The type of error that occurred.
+    """
+
+    error_code: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="errorCode")] = pydantic.Field(
+        default=None
+    )
+    """
+    Stable, machine-readable error code (e.g. project_not_found, voice_not_found, concurrency_limit_reached). Branch your error handling on this, not on the message text. The full catalog of codes with messages and suggested fixes is served unauthenticated at GET /v2/errors.
+    """
+
+    suggestion: typing.Optional[str] = pydantic.Field(default=None)
+    """
+    A suggested fix an agent can act on.
+    """
+
+    field: typing.Optional[str] = pydantic.Field(default=None)
+    """
+    The request field the error refers to, when the failure is tied to a specific field (e.g. projectId, voiceId, input[].assetId).
+    """
+
+    docs_url: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="docsUrl")] = pydantic.Field(
+        default=None
+    )
+    """
+    Link to the documentation page for the failing operation.
+    """
+
+    request_id: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="requestId")] = pydantic.Field(
+        default=None
+    )
+    """
+    Present on unexpected 500 responses. Include it when contacting support so the failing request can be located directly.
+    """
+
+    generation_id: typing_extensions.Annotated[typing.Optional[GenerationId], FieldMetadata(alias="generationId")] = (
+        pydantic.Field(default=None)
+    )
+    """
+    Original generation ID when available for an uncertain keyed submission or a DUPLICATE_SUBMISSION. Poll this ID; do not create another action to bypass IDEMPOTENCY_OUTCOME_UNKNOWN.
+    """
+
+    dialogue_edit_section: typing_extensions.Annotated[
+        typing.Optional[DialogueEditRetimeFailureSection], FieldMetadata(alias="dialogueEditSection")
+    ] = pydantic.Field(default=None)
+    """
+    For dialogue_edit_removal_too_large: the section to change, when it can be identified. Create a new dialogue edit preview before submitting again.
+    """
+
+    line_number: typing_extensions.Annotated[typing.Optional[int], FieldMetadata(alias="lineNumber")] = pydantic.Field(
+        default=None
+    )
+    """
+    For batch creation, on dialogue edit refusals only: the 1-based line of the refused record, counting non-empty JSONL lines. With a `rows` body, line N is `rows[N-1]`. Other record errors name the line only in `message`.
     """
 
     if IS_PYDANTIC_V2:

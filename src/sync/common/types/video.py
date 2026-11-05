@@ -2,10 +2,10 @@
 
 from ...core.unchecked_base_model import UncheckedBaseModel
 import typing
-import pydantic
 import typing_extensions
-from .asset_id import AssetId
 from ...core.serialization import FieldMetadata
+import pydantic
+from .asset_id import AssetId
 from .segment_secs import SegmentSecs
 from .segment_frames import SegmentFrames
 from ...core.pydantic_utilities import IS_PYDANTIC_V2
@@ -17,6 +17,13 @@ class Video(UncheckedBaseModel):
     """
 
     type: typing.Literal["video"] = "video"
+    ref_id: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="refId")] = pydantic.Field(
+        default=None
+    )
+    """
+    Optional reference identifier for segment definitions. Use this when a segment needs to refer back to a specific visual input item.
+    """
+
     url: typing.Optional[str] = pydantic.Field(default=None)
     """
     URL of the video to be used for generation. Either `url` or `assetId` must be provided.

@@ -6,15 +6,33 @@ import os
 import httpx
 from .core.api_error import ApiError
 from .core.client_wrapper import SyncClientWrapper
+from .account.client import AccountClient
 from .assets.client import AssetsClient
 from .batch.client import BatchClient
+from .dialogue_edits.client import DialogueEditsClient
+from .errors.client import ErrorsClient
+from .feedback.client import FeedbackClient
 from .generations.client import GenerationsClient
 from .models.client import ModelsClient
+from .organizations.client import OrganizationsClient
+from .projects.client import ProjectsClient
+from .transcriptions.client import TranscriptionsClient
+from .tts.client import TtsClient
+from .voices.client import VoicesClient
 from .core.client_wrapper import AsyncClientWrapper
+from .account.client import AsyncAccountClient
 from .assets.client import AsyncAssetsClient
 from .batch.client import AsyncBatchClient
+from .dialogue_edits.client import AsyncDialogueEditsClient
+from .errors.client import AsyncErrorsClient
+from .feedback.client import AsyncFeedbackClient
 from .generations.client import AsyncGenerationsClient
 from .models.client import AsyncModelsClient
+from .organizations.client import AsyncOrganizationsClient
+from .projects.client import AsyncProjectsClient
+from .transcriptions.client import AsyncTranscriptionsClient
+from .tts.client import AsyncTtsClient
+from .voices.client import AsyncVoicesClient
 
 
 class Sync:
@@ -79,10 +97,19 @@ class Sync:
             else httpx.Client(timeout=_defaulted_timeout),
             timeout=_defaulted_timeout,
         )
+        self.account = AccountClient(client_wrapper=self._client_wrapper)
         self.assets = AssetsClient(client_wrapper=self._client_wrapper)
         self.batch = BatchClient(client_wrapper=self._client_wrapper)
+        self.dialogue_edits = DialogueEditsClient(client_wrapper=self._client_wrapper)
+        self.errors = ErrorsClient(client_wrapper=self._client_wrapper)
+        self.feedback = FeedbackClient(client_wrapper=self._client_wrapper)
         self.generations = GenerationsClient(client_wrapper=self._client_wrapper)
         self.models = ModelsClient(client_wrapper=self._client_wrapper)
+        self.organizations = OrganizationsClient(client_wrapper=self._client_wrapper)
+        self.projects = ProjectsClient(client_wrapper=self._client_wrapper)
+        self.transcriptions = TranscriptionsClient(client_wrapper=self._client_wrapper)
+        self.tts = TtsClient(client_wrapper=self._client_wrapper)
+        self.voices = VoicesClient(client_wrapper=self._client_wrapper)
 
 
 class AsyncSync:
@@ -147,10 +174,19 @@ class AsyncSync:
             else httpx.AsyncClient(timeout=_defaulted_timeout),
             timeout=_defaulted_timeout,
         )
+        self.account = AsyncAccountClient(client_wrapper=self._client_wrapper)
         self.assets = AsyncAssetsClient(client_wrapper=self._client_wrapper)
         self.batch = AsyncBatchClient(client_wrapper=self._client_wrapper)
+        self.dialogue_edits = AsyncDialogueEditsClient(client_wrapper=self._client_wrapper)
+        self.errors = AsyncErrorsClient(client_wrapper=self._client_wrapper)
+        self.feedback = AsyncFeedbackClient(client_wrapper=self._client_wrapper)
         self.generations = AsyncGenerationsClient(client_wrapper=self._client_wrapper)
         self.models = AsyncModelsClient(client_wrapper=self._client_wrapper)
+        self.organizations = AsyncOrganizationsClient(client_wrapper=self._client_wrapper)
+        self.projects = AsyncProjectsClient(client_wrapper=self._client_wrapper)
+        self.transcriptions = AsyncTranscriptionsClient(client_wrapper=self._client_wrapper)
+        self.tts = AsyncTtsClient(client_wrapper=self._client_wrapper)
+        self.voices = AsyncVoicesClient(client_wrapper=self._client_wrapper)
 
 
 def _get_base_url(*, base_url: typing.Optional[str] = None, environment: SyncEnvironment) -> str:

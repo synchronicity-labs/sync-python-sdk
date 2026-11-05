@@ -12,9 +12,13 @@ from ..common.types.generation_error import GenerationError
 from ..common.errors.unauthorized_error import UnauthorizedError
 from ..common.errors.payment_required_error import PaymentRequiredError
 from ..common.errors.too_many_requests_error import TooManyRequestsError
+from ..common.types.batch_concurrency_error import BatchConcurrencyError
 from ..common.errors.internal_server_error import InternalServerError
 from json.decoder import JSONDecodeError
 from ..core.api_error import ApiError
+from ..common.types.batch_row import BatchRow
+from ..core.serialization import convert_and_respect_annotation_metadata
+from ..common.errors.unprocessable_entity_error import UnprocessableEntityError
 from ..common.types.batch_id import BatchId
 from ..common.types.batch_response import BatchResponse
 from ..core.jsonable_encoder import jsonable_encoder
@@ -42,7 +46,7 @@ class RawBatchClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[CreateBatchResponse]:
         """
-        API for [Batch Processing](/api-reference/guides/batch-processing). Available only for `Scale` and `Enterprise` plans.
+        Create a batch processing job from a JSONL file. Requires a paid plan; free accounts get 402 `plan_feature_unavailable`. Send the file in multipart field `input` (or the accepted `file` alias); it must be 5 MB or smaller. On Scale and above a batch holds 20-500 records by default and is queued, holding one concurrency slot. Below Scale every record runs as a generation right away, so a batch holds 1 record up to your plan's concurrency limit: more records than that returns 400, and more records than your currently free generation slots returns 429 `concurrency_limit_reached`. Credit-billed plans reserve credits for the whole batch at submit and get 402 `insufficient_credits` when the balance is short. Each line must contain `request_id`, endpoint exactly `/v2/generate`, and a generation `payload`. To send the records as a JSON array instead of a file, use "Create Batch from Rows", the `application/json` form of the same endpoint. Errors name a refused record by its 1-based line, counting non-empty lines: dialogue edit refusals return it as `lineNumber`, other record errors only in `message`.
 
         Parameters
         ----------
@@ -50,10 +54,10 @@ class RawBatchClient:
             See core.File for more documentation
 
         webhook_url : typing.Optional[str]
-            Optional webhook URL to receive batch completion notifications. A POST request will be sent when the batch completes or fails.
+            Optional webhook URL to receive batch completion notifications. A POST request will be sent when the batch completes or fails, with a Sync-Signature header (`t=<unix>,v1=<hmac_sha256>`) signed with the organization webhook secret and a stable Sync-Delivery-Id header. Delivery is attempted up to six times over about two hours.
 
         dry_run : typing.Optional[bool]
-            When true, validates the input file without processing. Returns validation status without creating generations.
+            When true, validates the JSONL file and returns `{ "status": "VALIDATED" }` without creating a batch.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -118,9 +122,129 @@ class RawBatchClient:
             if _response.status_code == 429:
                 raise TooManyRequestsError(
                     typing.cast(
+                        BatchConcurrencyError,
+                        construct_type(
+                            type_=BatchConcurrencyError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 500:
+                raise InternalServerError(
+                    typing.cast(
                         GenerationError,
                         construct_type(
                             type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, body=_response.text)
+        raise ApiError(status_code=_response.status_code, body=_response_json)
+
+    def create_from_rows(
+        self,
+        *,
+        rows: typing.Sequence[BatchRow],
+        webhook_url: typing.Optional[str] = OMIT,
+        dry_run: typing.Optional[bool] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> HttpResponse[CreateBatchResponse]:
+        """
+        The `application/json` form of `POST /v2/batch`, the same endpoint as "Create Batch": send the records in a `rows` array instead of a JSONL file. Each row is the same object as one JSONL line and is validated the same way: 20-500 rows by default on Scale and above, 1 row up to your free generation slots below Scale, 5 MB or smaller when serialized as JSONL, unique `request_id` values, and endpoint exactly `/v2/generate`. Errors name a refused row by its line, where line N is `rows[N-1]`: dialogue edit refusals return it as `lineNumber`, other record errors only in `message`. Requires a paid plan. In early access, enabled per organization, a row's payload can carry `dialogueEdit` to render a completed preview from POST /v2/dialogue-edits: send one video input, the video the preview was made from, and no audio input. All dialogue edit rows in a batch must come from the same source video. Each row is expanded at submit into the request POST /v2/generate builds for that preview and is charged the same. A dialogue edit row that cannot be rendered refuses the whole batch with the `/v2/generate` errorCode (for example dialogue_edit_not_found, 422) and `lineNumber`. See [Batch Processing](/api-reference/guides/batch-processing).
+
+        Parameters
+        ----------
+        rows : typing.Sequence[BatchRow]
+            The batch records: 20-500 by default on Scale and above, 1 up to your free generation slots below Scale. Each row contains `request_id`, endpoint exactly `/v2/generate`, and a generation `payload`, as on a JSONL line.
+
+        webhook_url : typing.Optional[str]
+            Optional webhook URL to receive batch completion notifications. A POST request will be sent when the batch completes or fails, with a Sync-Signature header (`t=<unix>,v1=<hmac_sha256>`) signed with the organization webhook secret and a stable Sync-Delivery-Id header. Delivery is attempted up to six times over about two hours.
+
+        dry_run : typing.Optional[bool]
+            When true, validates the rows, including dialogue edit expansion, and returns `{ "status": "VALIDATED" }` without creating a batch.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        HttpResponse[CreateBatchResponse]
+        """
+        _response = self._client_wrapper.httpx_client.request(
+            "v2/batch",
+            method="POST",
+            json={
+                "rows": convert_and_respect_annotation_metadata(
+                    object_=rows, annotation=typing.Sequence[BatchRow], direction="write"
+                ),
+                "webhook_url": webhook_url,
+                "dry_run": dry_run,
+            },
+            headers={
+                "content-type": "application/json",
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    CreateBatchResponse,
+                    construct_type(
+                        type_=CreateBatchResponse,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return HttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 402:
+                raise PaymentRequiredError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 429:
+                raise TooManyRequestsError(
+                    typing.cast(
+                        BatchConcurrencyError,
+                        construct_type(
+                            type_=BatchConcurrencyError,  # type: ignore
                             object_=_response.json(),
                         ),
                     )
@@ -296,7 +420,7 @@ class AsyncRawBatchClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[CreateBatchResponse]:
         """
-        API for [Batch Processing](/api-reference/guides/batch-processing). Available only for `Scale` and `Enterprise` plans.
+        Create a batch processing job from a JSONL file. Requires a paid plan; free accounts get 402 `plan_feature_unavailable`. Send the file in multipart field `input` (or the accepted `file` alias); it must be 5 MB or smaller. On Scale and above a batch holds 20-500 records by default and is queued, holding one concurrency slot. Below Scale every record runs as a generation right away, so a batch holds 1 record up to your plan's concurrency limit: more records than that returns 400, and more records than your currently free generation slots returns 429 `concurrency_limit_reached`. Credit-billed plans reserve credits for the whole batch at submit and get 402 `insufficient_credits` when the balance is short. Each line must contain `request_id`, endpoint exactly `/v2/generate`, and a generation `payload`. To send the records as a JSON array instead of a file, use "Create Batch from Rows", the `application/json` form of the same endpoint. Errors name a refused record by its 1-based line, counting non-empty lines: dialogue edit refusals return it as `lineNumber`, other record errors only in `message`.
 
         Parameters
         ----------
@@ -304,10 +428,10 @@ class AsyncRawBatchClient:
             See core.File for more documentation
 
         webhook_url : typing.Optional[str]
-            Optional webhook URL to receive batch completion notifications. A POST request will be sent when the batch completes or fails.
+            Optional webhook URL to receive batch completion notifications. A POST request will be sent when the batch completes or fails, with a Sync-Signature header (`t=<unix>,v1=<hmac_sha256>`) signed with the organization webhook secret and a stable Sync-Delivery-Id header. Delivery is attempted up to six times over about two hours.
 
         dry_run : typing.Optional[bool]
-            When true, validates the input file without processing. Returns validation status without creating generations.
+            When true, validates the JSONL file and returns `{ "status": "VALIDATED" }` without creating a batch.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -372,9 +496,129 @@ class AsyncRawBatchClient:
             if _response.status_code == 429:
                 raise TooManyRequestsError(
                     typing.cast(
+                        BatchConcurrencyError,
+                        construct_type(
+                            type_=BatchConcurrencyError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 500:
+                raise InternalServerError(
+                    typing.cast(
                         GenerationError,
                         construct_type(
                             type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, body=_response.text)
+        raise ApiError(status_code=_response.status_code, body=_response_json)
+
+    async def create_from_rows(
+        self,
+        *,
+        rows: typing.Sequence[BatchRow],
+        webhook_url: typing.Optional[str] = OMIT,
+        dry_run: typing.Optional[bool] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> AsyncHttpResponse[CreateBatchResponse]:
+        """
+        The `application/json` form of `POST /v2/batch`, the same endpoint as "Create Batch": send the records in a `rows` array instead of a JSONL file. Each row is the same object as one JSONL line and is validated the same way: 20-500 rows by default on Scale and above, 1 row up to your free generation slots below Scale, 5 MB or smaller when serialized as JSONL, unique `request_id` values, and endpoint exactly `/v2/generate`. Errors name a refused row by its line, where line N is `rows[N-1]`: dialogue edit refusals return it as `lineNumber`, other record errors only in `message`. Requires a paid plan. In early access, enabled per organization, a row's payload can carry `dialogueEdit` to render a completed preview from POST /v2/dialogue-edits: send one video input, the video the preview was made from, and no audio input. All dialogue edit rows in a batch must come from the same source video. Each row is expanded at submit into the request POST /v2/generate builds for that preview and is charged the same. A dialogue edit row that cannot be rendered refuses the whole batch with the `/v2/generate` errorCode (for example dialogue_edit_not_found, 422) and `lineNumber`. See [Batch Processing](/api-reference/guides/batch-processing).
+
+        Parameters
+        ----------
+        rows : typing.Sequence[BatchRow]
+            The batch records: 20-500 by default on Scale and above, 1 up to your free generation slots below Scale. Each row contains `request_id`, endpoint exactly `/v2/generate`, and a generation `payload`, as on a JSONL line.
+
+        webhook_url : typing.Optional[str]
+            Optional webhook URL to receive batch completion notifications. A POST request will be sent when the batch completes or fails, with a Sync-Signature header (`t=<unix>,v1=<hmac_sha256>`) signed with the organization webhook secret and a stable Sync-Delivery-Id header. Delivery is attempted up to six times over about two hours.
+
+        dry_run : typing.Optional[bool]
+            When true, validates the rows, including dialogue edit expansion, and returns `{ "status": "VALIDATED" }` without creating a batch.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        AsyncHttpResponse[CreateBatchResponse]
+        """
+        _response = await self._client_wrapper.httpx_client.request(
+            "v2/batch",
+            method="POST",
+            json={
+                "rows": convert_and_respect_annotation_metadata(
+                    object_=rows, annotation=typing.Sequence[BatchRow], direction="write"
+                ),
+                "webhook_url": webhook_url,
+                "dry_run": dry_run,
+            },
+            headers={
+                "content-type": "application/json",
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    CreateBatchResponse,
+                    construct_type(
+                        type_=CreateBatchResponse,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return AsyncHttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 402:
+                raise PaymentRequiredError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 429:
+                raise TooManyRequestsError(
+                    typing.cast(
+                        BatchConcurrencyError,
+                        construct_type(
+                            type_=BatchConcurrencyError,  # type: ignore
                             object_=_response.json(),
                         ),
                     )

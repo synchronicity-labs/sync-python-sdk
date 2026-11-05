@@ -2,11 +2,12 @@
 
 from ...core.unchecked_base_model import UncheckedBaseModel
 import typing_extensions
+import typing
 from ...core.serialization import FieldMetadata
 import pydantic
 from .segment_audio_input import SegmentAudioInput
+from .segment_options_override import SegmentOptionsOverride
 from ...core.pydantic_utilities import IS_PYDANTIC_V2
-import typing
 
 
 class GenerationSegment(UncheckedBaseModel):
@@ -14,19 +15,51 @@ class GenerationSegment(UncheckedBaseModel):
     Defines a video segment with its corresponding audio input. Used for multi-segment lipsync generations where different audio tracks can be applied to different video segments.
     """
 
-    start_time: typing_extensions.Annotated[float, FieldMetadata(alias="startTime")] = pydantic.Field()
+    start_time: typing_extensions.Annotated[typing.Optional[float], FieldMetadata(alias="startTime")] = pydantic.Field(
+        default=None
+    )
     """
-    Segment start time in seconds
-    """
-
-    end_time: typing_extensions.Annotated[float, FieldMetadata(alias="endTime")] = pydantic.Field()
-    """
-    Segment end time in seconds
+    Segment start time in seconds. Must be less than or equal to endTime.
     """
 
-    audio_input: typing_extensions.Annotated[SegmentAudioInput, FieldMetadata(alias="audioInput")] = pydantic.Field()
+    end_time: typing_extensions.Annotated[typing.Optional[float], FieldMetadata(alias="endTime")] = pydantic.Field(
+        default=None
+    )
     """
-    Audio configuration for this segment
+    Segment end time in seconds. Must be greater than or equal to startTime.
+    """
+
+    start_frame: typing_extensions.Annotated[typing.Optional[float], FieldMetadata(alias="startFrame")] = (
+        pydantic.Field(default=None)
+    )
+    """
+    Segment start frame. Use with endFrame instead of time bounds.
+    """
+
+    end_frame: typing_extensions.Annotated[typing.Optional[float], FieldMetadata(alias="endFrame")] = pydantic.Field(
+        default=None
+    )
+    """
+    Segment end frame. Use with startFrame instead of time bounds.
+    """
+
+    audio_input: typing_extensions.Annotated[typing.Optional[SegmentAudioInput], FieldMetadata(alias="audioInput")] = (
+        pydantic.Field(default=None)
+    )
+    """
+    Audio configuration for this segment. Required unless lipsync is false.
+    """
+
+    lipsync: typing.Optional[bool] = pydantic.Field(default=None)
+    """
+    Set to false to keep this part of the video exactly as it is: it is not lipsynced and not billed. The finished output then plays one audio track over the whole video (see outputAudio), so this part hears it too, with no cuts at segment edges. Defaults to true.
+    """
+
+    options_override: typing_extensions.Annotated[
+        typing.Optional[SegmentOptionsOverride], FieldMetadata(alias="optionsOverride")
+    ] = pydantic.Field(default=None)
+    """
+    Override generation options for this specific segment.
     """
 
     if IS_PYDANTIC_V2:

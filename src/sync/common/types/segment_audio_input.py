@@ -22,14 +22,14 @@ class SegmentAudioInput(UncheckedBaseModel):
         default=None
     )
     """
-    Optional start time (in seconds) to crop the referenced audio. When specified, end_time must also be provided.
+    Optional start time (in seconds) to crop the referenced audio. When specified, endTime must also be provided, and startTime must be less than or equal to endTime.
     """
 
     end_time: typing_extensions.Annotated[typing.Optional[float], FieldMetadata(alias="endTime")] = pydantic.Field(
         default=None
     )
     """
-    Optional end time (in seconds) to crop the referenced audio. When specified, start_time must also be provided.
+    Optional end time (in seconds) to crop the referenced audio. When specified, startTime must also be provided, and must be greater than or equal to startTime.
     """
 
     if IS_PYDANTIC_V2:

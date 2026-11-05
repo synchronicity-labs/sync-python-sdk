@@ -2,4 +2,4 @@
 
 import typing
 
-ModelType = typing.Union[typing.Literal["lipsync", "react"], typing.Any]
+VoiceProvider = typing.Union[typing.Literal["elevenlabs"], typing.Any]

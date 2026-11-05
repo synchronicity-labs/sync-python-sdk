@@ -8,7 +8,11 @@ from .input import Input
 from .generation_options import GenerationOptions
 from .generation_segment import GenerationSegment
 import typing_extensions
+from .output_audio import OutputAudio
 from ...core.serialization import FieldMetadata
+from .dub_dto import DubDto
+from .project_id import ProjectId
+from .dialogue_edit_reference import DialogueEditReference
 from ...core.pydantic_utilities import IS_PYDANTIC_V2
 
 
@@ -20,7 +24,7 @@ class CreateGenerationDto(UncheckedBaseModel):
 
     input: typing.List[Input] = pydantic.Field()
     """
-    Array of input objects. Must include one video input item and at least one audio input item. Audio input items can be provided as either: recorded/captured audio url or a text-to-speech input with tts provider configuration. When using segments, multiple audio inputs can be provided with unique refId values.
+    Normal lipsync requests must include exactly one visual input (video or image) and one audio or text input. Dubbed lipsync requests using dubParams must include exactly one video input and no audio or text input, because Sync extracts the dubbing source audio from that video. Image inputs are only supported with the sync-3 model. When using segments, audio or text inputs can carry unique refId values.
     """
 
     options: typing.Optional[GenerationOptions] = pydantic.Field(default=None)
@@ -33,18 +37,46 @@ class CreateGenerationDto(UncheckedBaseModel):
     segments definition list. When provided, allows defining one or more video segments with different audio inputs for each segment. Each segment specifies a time range and references an audio input by refId.
     """
 
+    output_audio: typing_extensions.Annotated[typing.Optional[OutputAudio], FieldMetadata(alias="outputAudio")] = (
+        pydantic.Field(default=None)
+    )
+    """
+    One audio input that plays over the whole finished output from its first second, replacing the sound of every part, lipsynced or not. Use it with segments, for example one dubbed track for a whole video where some segments set lipsync to false. When any segment sets lipsync to false and this is omitted, the only audio input is used. Not available with a custom output bucket, zero data retention or a retention override.
+    """
+
     webhook_url: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="webhookUrl")] = pydantic.Field(
         default=None
     )
     """
-    webhook url for generation status updates. once the generation completes we will send a POST request to the webhook url with the generation data.
+    Webhook URL for generation status updates. When the generation reaches a terminal state, Sync sends a POST request with the generation payload and a Sync-Signature header. Verify the header with the organization webhook secret from GET /v2/organizations/webhook/secret. HTTPS is strongly recommended.
     """
 
     output_file_name: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="outputFileName")] = (
         pydantic.Field(default=None)
     )
     """
-    Base filename for the generated output without extension. The .mp4 extension will be added automatically.  Only alphanumeric characters, underscores, and hyphens are allowed, up to 255 characters.
+    Base filename for the generated output without extension. The .mp4 extension will be added automatically. Only alphanumeric characters, underscores, and hyphens are allowed, up to 255 characters.
+    """
+
+    dub_params: typing_extensions.Annotated[typing.Optional[DubDto], FieldMetadata(alias="dubParams")] = pydantic.Field(
+        default=None
+    )
+    """
+    Dubbing parameters. When present, audio is extracted from the single video input, dubbed via ElevenLabs into the target language, and then lipsync is run with the dubbed audio. Do not include audio or text inputs with dubParams; requests that send both are rejected.
+    """
+
+    project_id: typing_extensions.Annotated[typing.Optional[ProjectId], FieldMetadata(alias="projectId")] = (
+        pydantic.Field(default=None)
+    )
+    """
+    Optionally attach this generation to a project (created via POST /v2/projects) so it appears in Studio under that project. Must reference a project in your organization — otherwise the request is rejected with 422.
+    """
+
+    dialogue_edit: typing_extensions.Annotated[
+        typing.Optional[DialogueEditReference], FieldMetadata(alias="dialogueEdit")
+    ] = pydantic.Field(default=None)
+    """
+    Use the id of a completed dialogue edit from POST /v2/dialogue-edits to supply the audio and edited regions. Requires a preview that ran segment lipsync and section expansion (see the job's segmentLipsyncEnabled and sectionExpansionEnabled). Send exactly one video input, the same video the dialogue edit was made from, and no audio input, segments or dubParams. Billing, status, wait and webhooks work as for any generation.
     """
 
     if IS_PYDANTIC_V2:

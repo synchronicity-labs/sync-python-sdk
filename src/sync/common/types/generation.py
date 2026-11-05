@@ -12,6 +12,8 @@ from .model import Model
 from .generation_options import GenerationOptions
 from .generation_segment import GenerationSegment
 from .generation_status import GenerationStatus
+from .project_id import ProjectId
+from .generation_estimate import GenerationEstimate
 from ...core.pydantic_utilities import IS_PYDANTIC_V2
 
 
@@ -26,9 +28,11 @@ class Generation(UncheckedBaseModel):
     The error message if the generation failed.
     """
 
-    error_code: typing.Optional[str] = pydantic.Field(default=None)
+    error_code: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="errorCode")] = pydantic.Field(
+        default=None
+    )
     """
-    The error code if the generation failed.
+    Stable, machine-readable error code if the generation failed (e.g. generation_input_video_inaccessible). The full catalog of codes, messages and suggested fixes is served unauthenticated at GET /v2/errors.
     """
 
     id: GenerationId
@@ -61,6 +65,13 @@ class Generation(UncheckedBaseModel):
     The URL of the output media.
     """
 
+    output_file_name: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="outputFileName")] = (
+        pydantic.Field(default=None)
+    )
+    """
+    The sanitized filename applied to the output media. Characters outside letters, numbers, dashes and underscores are stripped and spaces become underscores, so this can differ from the value submitted. Null when no name was provided.
+    """
+
     segments: typing.Optional[typing.List[GenerationSegment]] = pydantic.Field(default=None)
     """
     The segments of the generation.
@@ -73,6 +84,13 @@ class Generation(UncheckedBaseModel):
     The URL of the segment output media.
     """
 
+    synthesized_audio_url: typing_extensions.Annotated[
+        typing.Optional[str], FieldMetadata(alias="synthesizedAudioUrl")
+    ] = pydantic.Field(default=None)
+    """
+    The URL of the audio synthesized from a text (TTS) input. Only present for generations created with a TTS text input; reuse it as an audio input to keep the same take across generations.
+    """
+
     status: GenerationStatus = pydantic.Field()
     """
     The status of the generation.
@@ -83,6 +101,25 @@ class Generation(UncheckedBaseModel):
     )
     """
     The URL to the webhook endpoint.
+    """
+
+    project_id: typing_extensions.Annotated[typing.Optional[ProjectId], FieldMetadata(alias="projectId")] = (
+        pydantic.Field(default=None)
+    )
+    """
+    The id of the project this generation is attached to, or null when it belongs to no project. Set via the projectId field on the create request.
+    """
+
+    generation_estimate: typing_extensions.Annotated[
+        typing.Optional[GenerationEstimate], FieldMetadata(alias="generationEstimate")
+    ] = pydantic.Field(default=None)
+    """
+    A completion-time estimate captured once when the generation is accepted. Populated only for generations created in sync's own apps, such as Sync Studio; the field is absent for generations created through the API today.
+    """
+
+    progress_percent: typing.Optional[float] = pydantic.Field(default=None)
+    """
+    Generation progress from 0 to 100. Only present on Get Generation with `include=progress`.
     """
 
     if IS_PYDANTIC_V2:

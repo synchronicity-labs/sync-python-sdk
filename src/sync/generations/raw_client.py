@@ -6,6 +6,10 @@ from ..common.types.model import Model
 from ..common.types.input import Input
 from ..common.types.generation_options import GenerationOptions
 from ..common.types.generation_segment import GenerationSegment
+from ..common.types.output_audio import OutputAudio
+from ..common.types.dub_dto import DubDto
+from ..common.types.project_id import ProjectId
+from ..common.types.dialogue_edit_reference import DialogueEditReference
 from ..core.request_options import RequestOptions
 from ..core.http_response import HttpResponse
 from ..common.types.generation import Generation
@@ -14,15 +18,25 @@ from ..core.unchecked_base_model import construct_type
 from ..common.errors.bad_request_error import BadRequestError
 from ..common.types.generation_error import GenerationError
 from ..common.errors.unauthorized_error import UnauthorizedError
+from ..common.errors.unprocessable_entity_error import UnprocessableEntityError
+from ..common.errors.conflict_error import ConflictError
+from ..common.errors.generation_deleted_error import GenerationDeletedError
+from ..common.errors.generation_too_many_requests_error import GenerationTooManyRequestsError
+from ..common.types.generation_concurrency_error import GenerationConcurrencyError
+from ..common.errors.service_unavailable_error import ServiceUnavailableError
+from ..common.errors.gateway_timeout_error import GatewayTimeoutError
 from ..common.errors.internal_server_error import InternalServerError
 from json.decoder import JSONDecodeError
 from ..core.api_error import ApiError
 from .. import core
+from ..common.errors.payload_too_large_error import PayloadTooLargeError
 from ..common.types.generation_id import GenerationId
 from ..core.jsonable_encoder import jsonable_encoder
 from ..common.errors.not_found_error import NotFoundError
 from ..common.types.generation_status import GenerationStatus
+from ..common.types.estimate_workflow import EstimateWorkflow
 from ..common.types.estimated_generation_cost import EstimatedGenerationCost
+from ..common.types.project_generation import ProjectGeneration
 from ..core.client_wrapper import AsyncClientWrapper
 from ..core.http_response import AsyncHttpResponse
 
@@ -39,20 +53,30 @@ class RawGenerationsClient:
         *,
         model: Model,
         input: typing.Sequence[Input],
+        idempotency_key: typing.Optional[str] = None,
         options: typing.Optional[GenerationOptions] = OMIT,
         segments: typing.Optional[typing.Sequence[GenerationSegment]] = OMIT,
+        output_audio: typing.Optional[OutputAudio] = OMIT,
         webhook_url: typing.Optional[str] = OMIT,
         output_file_name: typing.Optional[str] = OMIT,
+        dub_params: typing.Optional[DubDto] = OMIT,
+        project_id: typing.Optional[ProjectId] = OMIT,
+        dialogue_edit: typing.Optional[DialogueEditReference] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[Generation]:
         """
+        Create a lip sync generation with `application/json` — provide each input by `url` or by `assetId` from an uploaded asset. For reusable or large local files, upload them first with POST /v2/assets/upload and pass the returned `assetId`; see [Asset Uploads](/developer-guides/asset-uploads). Use the multipart "Create Generation with Files" form only when uploading direct audio, video, or image file fields; it has a 5 GiB per-file application parser limit, subject to your plan and any lower proxy limits. Nested fields such as input, options, segments, outputAudio, dubParams, and dialogueEdit must be JSON strings in multipart requests. If a `text` input requires speech synthesis and the ElevenLabs provider is temporarily unavailable, the request returns errorCode elevenlabs_service_unavailable: 504 for provider timeouts and 503 for other provider outages for unkeyed requests. Keyed uncertain outcomes return 503 IDEMPOTENCY_OUTCOME_UNKNOWN instead. An API-key request that passes dialogueEdit is refused with errorCode dialogue_edit_retime_required (422) when the organization's rollout lacks segment lipsync and section expansion. A dialogueEdit that removes more speech than the surrounding footage can absorb returns errorCode dialogue_edit_removal_too_large (422). When the failing section can be identified, `dialogueEditSection` on the error names it; change it and create a new preview before submitting again. Retrying the same preview fails again. Send the optional Idempotency-Key header on the first request and reuse it with the same payload on retries. An accepted replay returns 200 with the original generation's current state and Idempotency-Replayed: true. A retry after that generation ended FAILED or REJECTED starts a new generation instead (201). An API-key request without the header that is identical to one your organization sent in the last 60 seconds returns 409 DUPLICATE_SUBMISSION with the original generationId; send a unique Idempotency-Key with each generation you intend. See [Idempotent Requests](/api-reference/guides/idempotency) for key validation, conflicts, retention, duplicates, and uncertain-outcome recovery.
+
         Parameters
         ----------
         model : Model
             name of the model to use for generation.
 
         input : typing.Sequence[Input]
-            Array of input objects. Must include one video input item and at least one audio input item. Audio input items can be provided as either: recorded/captured audio url or a text-to-speech input with tts provider configuration. When using segments, multiple audio inputs can be provided with unique refId values.
+            Normal lipsync requests must include exactly one visual input (video or image) and one audio or text input. Dubbed lipsync requests using dubParams must include exactly one video input and no audio or text input, because Sync extracts the dubbing source audio from that video. Image inputs are only supported with the sync-3 model. When using segments, audio or text inputs can carry unique refId values.
+
+        idempotency_key : typing.Optional[str]
+            Case-sensitive organization-scoped key, 1–128 characters matching [A-Za-z0-9._~-]+. Send exactly one header. Reuse the same key and payload for retries of one action; a retry after the generation ended FAILED or REJECTED starts a new one. Use a unique key per intended generation. Retained seven days from acceptance, longer while active or unresolved. Not a JSON field.
 
         options : typing.Optional[GenerationOptions]
             additional options available for generation.
@@ -60,11 +84,23 @@ class RawGenerationsClient:
         segments : typing.Optional[typing.Sequence[GenerationSegment]]
             segments definition list. When provided, allows defining one or more video segments with different audio inputs for each segment. Each segment specifies a time range and references an audio input by refId.
 
+        output_audio : typing.Optional[OutputAudio]
+            One audio input that plays over the whole finished output from its first second, replacing the sound of every part, lipsynced or not. Use it with segments, for example one dubbed track for a whole video where some segments set lipsync to false. When any segment sets lipsync to false and this is omitted, the only audio input is used. Not available with a custom output bucket, zero data retention or a retention override.
+
         webhook_url : typing.Optional[str]
-            webhook url for generation status updates. once the generation completes we will send a POST request to the webhook url with the generation data.
+            Webhook URL for generation status updates. When the generation reaches a terminal state, Sync sends a POST request with the generation payload and a Sync-Signature header. Verify the header with the organization webhook secret from GET /v2/organizations/webhook/secret. HTTPS is strongly recommended.
 
         output_file_name : typing.Optional[str]
-            Base filename for the generated output without extension. The .mp4 extension will be added automatically.  Only alphanumeric characters, underscores, and hyphens are allowed, up to 255 characters.
+            Base filename for the generated output without extension. The .mp4 extension will be added automatically. Only alphanumeric characters, underscores, and hyphens are allowed, up to 255 characters.
+
+        dub_params : typing.Optional[DubDto]
+            Dubbing parameters. When present, audio is extracted from the single video input, dubbed via ElevenLabs into the target language, and then lipsync is run with the dubbed audio. Do not include audio or text inputs with dubParams; requests that send both are rejected.
+
+        project_id : typing.Optional[ProjectId]
+            Optionally attach this generation to a project (created via POST /v2/projects) so it appears in Studio under that project. Must reference a project in your organization — otherwise the request is rejected with 422.
+
+        dialogue_edit : typing.Optional[DialogueEditReference]
+            Use the id of a completed dialogue edit from POST /v2/dialogue-edits to supply the audio and edited regions. Requires a preview that ran segment lipsync and section expansion (see the job's segmentLipsyncEnabled and sectionExpansionEnabled). Send exactly one video input, the same video the dialogue edit was made from, and no audio input, segments or dubParams. Billing, status, wait and webhooks work as for any generation.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -72,7 +108,7 @@ class RawGenerationsClient:
         Returns
         -------
         HttpResponse[Generation]
-            Job created successfully
+            First acceptance returns 201, as does a keyed retry that starts a new generation after the original ended FAILED or REJECTED. An equivalent keyed replay of an active or completed generation returns 200 with this same response shape and Idempotency-Replayed: true.
         """
         _response = self._client_wrapper.httpx_client.request(
             "v2/generate",
@@ -88,8 +124,22 @@ class RawGenerationsClient:
                 "segments": convert_and_respect_annotation_metadata(
                     object_=segments, annotation=typing.Sequence[GenerationSegment], direction="write"
                 ),
+                "outputAudio": convert_and_respect_annotation_metadata(
+                    object_=output_audio, annotation=OutputAudio, direction="write"
+                ),
                 "webhookUrl": webhook_url,
                 "outputFileName": output_file_name,
+                "dubParams": convert_and_respect_annotation_metadata(
+                    object_=dub_params, annotation=DubDto, direction="write"
+                ),
+                "projectId": project_id,
+                "dialogueEdit": convert_and_respect_annotation_metadata(
+                    object_=dialogue_edit, annotation=DialogueEditReference, direction="write"
+                ),
+            },
+            headers={
+                "content-type": "application/json",
+                "Idempotency-Key": str(idempotency_key) if idempotency_key is not None else None,
             },
             request_options=request_options,
             omit=OMIT,
@@ -124,6 +174,66 @@ class RawGenerationsClient:
                         ),
                     )
                 )
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 409:
+                raise ConflictError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 410:
+                raise GenerationDeletedError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 429:
+                raise GenerationTooManyRequestsError(
+                    typing.cast(
+                        GenerationConcurrencyError,
+                        construct_type(
+                            type_=GenerationConcurrencyError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 503:
+                raise ServiceUnavailableError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 504:
+                raise GatewayTimeoutError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
             if _response.status_code == 500:
                 raise InternalServerError(
                     typing.cast(
@@ -144,13 +254,22 @@ class RawGenerationsClient:
         *,
         model: Model,
         video: typing.Optional[core.File] = OMIT,
+        image: typing.Optional[core.File] = OMIT,
         audio: typing.Optional[core.File] = OMIT,
         input: typing.Optional[typing.List[Input]] = OMIT,
         options: typing.Optional[GenerationOptions] = OMIT,
+        segments: typing.Optional[typing.List[GenerationSegment]] = OMIT,
+        output_audio: typing.Optional[OutputAudio] = OMIT,
+        dub_params: typing.Optional[DubDto] = OMIT,
         webhook_url: typing.Optional[str] = OMIT,
+        output_file_name: typing.Optional[str] = OMIT,
+        project_id: typing.Optional[ProjectId] = OMIT,
+        dialogue_edit: typing.Optional[DialogueEditReference] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[Generation]:
         """
+        The multipart/form-data form of `POST /v2/generate` — the same endpoint as "Create Generation", for uploading local files directly instead of passing URLs. Send each file under a field named for its type (`video`, `image`, `audio`), at most one of each. The application parser allows up to 5 GiB (5 × 1024³ bytes) per file, 3 files, 32 fields, 35 total parts, and 1 MiB per field. A file over the parser limit returns 413 generation_input_validation_failed, and a file over your plan limit returns 422 file_size_exceeds_plan_limit. Proxy limits may be lower; this ceiling does not guarantee a 5 GiB direct transfer. Each file is saved as an asset in your organization and passed to the generation by `assetId`. For large files, upload via POST /v2/assets/upload first and pass the `assetId`, so retries don't resend the file. Nested fields such as `input`, `options`, `segments`, `outputAudio`, `dubParams`, and `dialogueEdit` must be sent as JSON strings in multipart requests. Image inputs are sync-3 only. If a `text` input requires speech synthesis and the ElevenLabs provider is temporarily unavailable, the request returns errorCode elevenlabs_service_unavailable: 504 for provider timeouts and 503 for other provider outages for unkeyed requests. Keyed uncertain outcomes return 503 IDEMPOTENCY_OUTCOME_UNKNOWN instead. An API-key request that passes dialogueEdit is refused with errorCode dialogue_edit_retime_required (422) when the organization's rollout lacks segment lipsync and section expansion. A dialogueEdit that removes more speech than the surrounding footage can absorb returns errorCode dialogue_edit_removal_too_large (422). When the failing section can be identified, `dialogueEditSection` on the error names it; change it and create a new preview before submitting again. Retrying the same preview fails again. Send the optional Idempotency-Key header on the first request and reuse it with the same payload on retries. An accepted replay returns 200 with the original generation's current state and Idempotency-Replayed: true. A retry after that generation ended FAILED or REJECTED starts a new generation instead (201). An API-key request without the header that is identical to one your organization sent in the last 60 seconds returns 409 DUPLICATE_SUBMISSION with the original generationId; send a unique Idempotency-Key with each generation you intend. See [Idempotent Requests](/api-reference/guides/idempotency) for key validation, conflicts, retention, duplicates, and uncertain-outcome recovery.
+
         Parameters
         ----------
         model : Model
@@ -158,15 +277,36 @@ class RawGenerationsClient:
         video : typing.Optional[core.File]
             See core.File for more documentation
 
+        image : typing.Optional[core.File]
+            See core.File for more documentation
+
         audio : typing.Optional[core.File]
             See core.File for more documentation
 
         input : typing.Optional[typing.List[Input]]
-            Array of input objects. Can be used to provide urls for larger files. Each input should either have a file or a url. Audio input items can be provided as either: recorded/captured audio url or a text-to-speech input with tts provider configuration.
+            Array of input objects, encoded as a JSON string in multipart requests. Can be used to provide URLs or assetIds for larger files. Each input should either have a file, a url, or an assetId. Audio input items can be provided as either recorded/captured audio URL or a text-to-speech input with TTS provider configuration.
 
         options : typing.Optional[GenerationOptions]
+            Optional generation options, encoded as a JSON string in multipart requests.
+
+        segments : typing.Optional[typing.List[GenerationSegment]]
+            Optional segment definitions, encoded as a JSON string in multipart requests.
+
+        output_audio : typing.Optional[OutputAudio]
+            Optional audio input that plays over the whole finished output, encoded as a JSON string in multipart requests, for example `{"refId":"dub"}`. Use with segments. The refId must name an audio input sent by url or assetId: an uploaded audio file has no refId.
+
+        dub_params : typing.Optional[DubDto]
+            Optional dubbing parameters, encoded as a JSON string in multipart requests.
 
         webhook_url : typing.Optional[str]
+
+        output_file_name : typing.Optional[str]
+
+        project_id : typing.Optional[ProjectId]
+            Optional project id to attach the generation to.
+
+        dialogue_edit : typing.Optional[DialogueEditReference]
+            Optional reference to a completed dialogue edit (its id from POST /v2/dialogue-edits) to render its preview into a video, encoded as a JSON string in multipart requests. Send one video input from the same source and no audio, segments or dubParams.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -174,7 +314,7 @@ class RawGenerationsClient:
         Returns
         -------
         HttpResponse[Generation]
-            Job created successfully
+            First acceptance returns 201, as does a keyed retry that starts a new generation after the original ended FAILED or REJECTED. An equivalent keyed replay of an active or completed generation returns 200 with this same response shape and Idempotency-Replayed: true.
         """
         _response = self._client_wrapper.httpx_client.request(
             "v2/generate",
@@ -183,10 +323,17 @@ class RawGenerationsClient:
                 "model": model,
                 "input": input,
                 "options": options,
+                "segments": segments,
+                "outputAudio": output_audio,
+                "dubParams": dub_params,
                 "webhookUrl": webhook_url,
+                "outputFileName": output_file_name,
+                "projectId": project_id,
+                "dialogueEdit": dialogue_edit,
             },
             files={
                 **({"video": video} if video is not None else {}),
+                **({"image": image} if image is not None else {}),
                 **({"audio": audio} if audio is not None else {}),
             },
             request_options=request_options,
@@ -222,6 +369,76 @@ class RawGenerationsClient:
                         ),
                     )
                 )
+            if _response.status_code == 413:
+                raise PayloadTooLargeError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 409:
+                raise ConflictError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 410:
+                raise GenerationDeletedError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 429:
+                raise GenerationTooManyRequestsError(
+                    typing.cast(
+                        GenerationConcurrencyError,
+                        construct_type(
+                            type_=GenerationConcurrencyError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 503:
+                raise ServiceUnavailableError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 504:
+                raise GatewayTimeoutError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
             if _response.status_code == 500:
                 raise InternalServerError(
                     typing.cast(
@@ -238,12 +455,29 @@ class RawGenerationsClient:
         raise ApiError(status_code=_response.status_code, body=_response_json)
 
     def get(
-        self, id: GenerationId, *, request_options: typing.Optional[RequestOptions] = None
+        self,
+        id: GenerationId,
+        *,
+        wait: typing.Optional[bool] = None,
+        timeout: typing.Optional[float] = None,
+        include: typing.Optional[str] = None,
+        request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[Generation]:
         """
+        Retrieve the current generation state. This /v2/generate/{id} route supports the wait, timeout and include options below.
+
         Parameters
         ----------
         id : GenerationId
+
+        wait : typing.Optional[bool]
+            When true, long-poll: hold the request open until the generation reaches a terminal status (COMPLETED/FAILED/REJECTED) or the timeout elapses, then return the latest state. Waits are short (10s max) — treat this as a convenience for jobs about to finish, and poll again (the response includes a `Retry-After: 2` header) or use a webhook for longer jobs. wait=true responses also carry `X-Sync-Wait-Mode: long_poll` and `X-Sync-Wait-Timeout-Seconds` headers. Cannot be combined with include=progress.
+
+        timeout : typing.Optional[float]
+            Max seconds to hold a wait=true request open (default 5, max 10 — values outside 1-10 are rejected with a 400). On timeout the current (non-terminal) generation is returned with HTTP 200, so check `status` and poll again, or use a webhook for long jobs.
+
+        include : typing.Optional[str]
+            Comma-separated extra fields to include. include=progress adds a progress_percent field (fetched live from the inference service).
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -256,6 +490,11 @@ class RawGenerationsClient:
         _response = self._client_wrapper.httpx_client.request(
             f"v2/generate/{jsonable_encoder(id)}",
             method="GET",
+            params={
+                "wait": wait,
+                "timeout": timeout,
+                "include": include,
+            },
             request_options=request_options,
         )
         try:
@@ -303,11 +542,173 @@ class RawGenerationsClient:
             raise ApiError(status_code=_response.status_code, body=_response.text)
         raise ApiError(status_code=_response.status_code, body=_response_json)
 
+    def download(
+        self,
+        id: GenerationId,
+        *,
+        file_name: typing.Optional[str] = None,
+        x_sync_accelerate: typing.Optional[str] = None,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> HttpResponse[str]:
+        """
+        Obtain the available full output of a completed generation in your
+        organization. Authenticate with `x-api-key`; no Studio project or user
+        session is required. Any valid API key belonging to the generation's
+        organization can request the URL.
+        
+        The successful response is an **unquoted URL in a text/plain body**,
+        not JSON, a redirect, or the video itself. Fetch that URL separately
+        without forwarding your API key.
+        
+        ```bash
+        download_url=$(curl --fail-with-body --silent --show-error \
+          -H "x-api-key: $SYNC_API_KEY" \
+          "https://api.sync.so/v2/generations/$GENERATION_ID/download") &&
+        curl --fail --location "$download_url" --output output.mov
+        ```
+        
+        The URL resolves an existing output using your organization's current
+        plan and billing-version eligibility. Free and watermark-required plans
+        receive the watermarked derivative when present. Entitled plans (such
+        as v2 Creator and v3 Starter or higher) receive the clean output when
+        available. Historical outputs can have the watermark burned in, so an
+        upgrade does not guarantee every old output becomes watermark-free.
+        Outputs created without a watermark can remain clean after a downgrade.
+        If no watermarked derivative exists, the resolver retains its existing
+        fallback to the original output; changing plans does not rewrite files.
+        This endpoint does not generate a new render or remove burned-in watermarks.
+        
+        Signed S3 URLs request seven-day validity, but credential expiry,
+        revocation, access changes, or file deletion can make them unusable
+        sooner. Request this endpoint again for a fresh signed URL while the
+        output is still available. The selected S3 file is checked before
+        signing; a successful response does not guarantee future availability.
+        Older URL-only records return their stored URL unchanged, without
+        checking its availability or extending its original expiration.
+        These URLs are download credentials: keep them private.
+        
+        Errors use the standard JSON error body and stable `errorCode`:
+        
+        | Status | Code | Meaning / next step |
+        | --- | --- | --- |
+        | 400 | — | Invalid generation UUID. |
+        | 401 | — | API key missing, invalid, or revoked. |
+        | 404 | `generation_not_found` | Missing, deleted, or outside your organization. |
+        | 404 | `generation_output_unavailable` | No eligible output reference or the selected file is missing; contact support. |
+        | 409 | `generation_not_ready` | Pending or processing; poll Get Generation until COMPLETED. |
+        | 422 | `generation_not_downloadable` | Failed or rejected; inspect the generation error. |
+        | 503 | `generation_download_unavailable` | Storage lookup or signing failed; retry with backoff. |
+        
+        Authentication also returns 422 for draft organizations. Requesting a
+        download URL does not create a project, incur a generation charge, or
+        restore deleted files.
+        
+        Parameters
+        ----------
+        id : GenerationId
+        
+        file_name : typing.Optional[str]
+            Optional download filename. Its extension is replaced with the output's format. Ignored for URL-only outputs.
+        
+        x_sync_accelerate : typing.Optional[str]
+            Send true to request transfer acceleration; falls back to the standard endpoint when acceleration is disabled.
+        
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+        
+        Returns
+        -------
+        HttpResponse[str]
+            Unquoted download URL. Read as text and fetch separately.
+        """
+        _response = self._client_wrapper.httpx_client.request(
+            f"v2/generations/{jsonable_encoder(id)}/download",
+            method="GET",
+            params={
+                "fileName": file_name,
+            },
+            headers={
+                "x-sync-accelerate": str(x_sync_accelerate) if x_sync_accelerate is not None else None,
+            },
+            request_options=request_options,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                return _response.text  # type: ignore
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 404:
+                raise NotFoundError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 409:
+                raise ConflictError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 503:
+                raise ServiceUnavailableError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, body=_response.text)
+        raise ApiError(status_code=_response.status_code, body=_response_json)
+
     def list(
         self,
         *,
         status: typing.Optional[typing.Sequence[GenerationStatus]] = None,
         ids: typing.Optional[typing.Sequence[str]] = None,
+        source: typing.Optional[typing.Sequence[str]] = None,
+        project_id: typing.Optional[ProjectId] = None,
+        limit: typing.Optional[int] = None,
+        cursor: typing.Optional[str] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[typing.List[Generation]]:
         """
@@ -318,6 +719,18 @@ class RawGenerationsClient:
 
         ids : typing.Optional[typing.Sequence[str]]
             Filter generations by ID. Accepts multiple IDs as a comma-separated list.
+
+        source : typing.Optional[typing.Sequence[str]]
+            Filter generations by source. Accepts multiple sources as a comma-separated list.
+
+        project_id : typing.Optional[ProjectId]
+            Return only generations in this project. Must be a UUID. A project you can't access returns an empty list.
+
+        limit : typing.Optional[int]
+            Maximum number of generations to return (1-100). When set, results are ordered newest first and can be paged with `cursor`.
+
+        cursor : typing.Optional[str]
+            ID of the last generation on the previous page. Requires `limit`.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -333,6 +746,10 @@ class RawGenerationsClient:
             params={
                 "status": status,
                 "ids": ids,
+                "source": source,
+                "projectId": project_id,
+                "limit": limit,
+                "cursor": cursor,
             },
             request_options=request_options,
         )
@@ -346,6 +763,16 @@ class RawGenerationsClient:
                     ),
                 )
                 return HttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
             if _response.status_code == 401:
                 raise UnauthorizedError(
                     typing.cast(
@@ -374,59 +801,50 @@ class RawGenerationsClient:
     def estimate_cost(
         self,
         *,
-        model: Model,
-        input: typing.Sequence[Input],
-        options: typing.Optional[GenerationOptions] = OMIT,
-        segments: typing.Optional[typing.Sequence[GenerationSegment]] = OMIT,
-        webhook_url: typing.Optional[str] = OMIT,
-        output_file_name: typing.Optional[str] = OMIT,
+        model: str,
+        duration: float,
+        fps: typing.Optional[float] = OMIT,
+        workflow: typing.Optional[EstimateWorkflow] = OMIT,
+        reasoning_enabled: typing.Optional[bool] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
-    ) -> HttpResponse[typing.List[EstimatedGenerationCost]]:
+    ) -> HttpResponse[EstimatedGenerationCost]:
         """
+        Estimate a generation from its model and billable duration in seconds. Supply a finite positive duration and, optionally, a finite positive fps (defaults to 25 for credit-billed organizations and 30 otherwise). Set `workflow` to `translate-and-dub` to include dubbing; the response then carries a `breakdown`. `durationCheck` says whether your account and the model allow the quoted duration. No media is fetched and no generation is created. POST /v2/generate/estimate-cost is an alias of this endpoint. Invalid request fields return 400. If the billing calculation rejects the duration or frame rate, it returns 422 cost_estimate_unavailable without price fields.
+
         Parameters
         ----------
-        model : Model
-            name of the model to use for generation.
+        model : str
+            Model to estimate, for example lipsync-2 or sync-3.
 
-        input : typing.Sequence[Input]
-            Array of input objects. Must include one video input item and at least one audio input item. Audio input items can be provided as either: recorded/captured audio url or a text-to-speech input with tts provider configuration. When using segments, multiple audio inputs can be provided with unique refId values.
+        duration : float
+            Finite, positive billable duration in seconds.
 
-        options : typing.Optional[GenerationOptions]
-            additional options available for generation.
+        fps : typing.Optional[float]
+            Source video frame rate. When omitted, credit-billed organizations are quoted at 25, the rate generation admission holds credits at when the source frame rate cannot be read; other organizations at 30.
 
-        segments : typing.Optional[typing.Sequence[GenerationSegment]]
-            segments definition list. When provided, allows defining one or more video segments with different audio inputs for each segment. Each segment specifies a time range and references an audio input by refId.
+        workflow : typing.Optional[EstimateWorkflow]
+            Omit for lip-sync only. `translate-and-dub` includes dubbing and lip-sync, estimated using the source duration. Actual output duration may differ.
 
-        webhook_url : typing.Optional[str]
-            webhook url for generation status updates. once the generation completes we will send a POST request to the webhook url with the generation data.
-
-        output_file_name : typing.Optional[str]
-            Base filename for the generated output without extension. The .mp4 extension will be added automatically.  Only alphanumeric characters, underscores, and hyphens are allowed, up to 255 characters.
+        reasoning_enabled : typing.Optional[bool]
+            Include reasoning pricing when supported by the model.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
 
         Returns
         -------
-        HttpResponse[typing.List[EstimatedGenerationCost]]
-            Generations retrieved successfully
+        HttpResponse[EstimatedGenerationCost]
+            A single estimate; estimatedCredits is null for dollar-billed organizations.
         """
         _response = self._client_wrapper.httpx_client.request(
-            "v2/analyze/cost",
+            "v2/generations/estimate",
             method="POST",
             json={
                 "model": model,
-                "input": convert_and_respect_annotation_metadata(
-                    object_=input, annotation=typing.Sequence[Input], direction="write"
-                ),
-                "options": convert_and_respect_annotation_metadata(
-                    object_=options, annotation=GenerationOptions, direction="write"
-                ),
-                "segments": convert_and_respect_annotation_metadata(
-                    object_=segments, annotation=typing.Sequence[GenerationSegment], direction="write"
-                ),
-                "webhookUrl": webhook_url,
-                "outputFileName": output_file_name,
+                "duration": duration,
+                "fps": fps,
+                "workflow": workflow,
+                "reasoningEnabled": reasoning_enabled,
             },
             request_options=request_options,
             omit=OMIT,
@@ -434,15 +852,113 @@ class RawGenerationsClient:
         try:
             if 200 <= _response.status_code < 300:
                 _data = typing.cast(
-                    typing.List[EstimatedGenerationCost],
+                    EstimatedGenerationCost,
                     construct_type(
-                        type_=typing.List[EstimatedGenerationCost],  # type: ignore
+                        type_=EstimatedGenerationCost,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return HttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 500:
+                raise InternalServerError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, body=_response.text)
+        raise ApiError(status_code=_response.status_code, body=_response_json)
+
+    def delete(
+        self, id: GenerationId, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> HttpResponse[ProjectGeneration]:
+        """
+        Delete a generation. Generations are organization-scoped, so any member — or an API key for the organization — can delete one. Only generations in a terminal state can be deleted; deleting one that is still processing returns 409 (errorCode `generation_not_deletable_while_processing`). Returns the deleted generation in its stored shape (`modelName`, `inputs`, `outputMediaUrl`, `deletedAt`), not the Get Generation shape.
+
+        Parameters
+        ----------
+        id : GenerationId
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        HttpResponse[ProjectGeneration]
+            The deleted generation, in the stored-generation shape.
+        """
+        _response = self._client_wrapper.httpx_client.request(
+            f"v2/generations/{jsonable_encoder(id)}",
+            method="DELETE",
+            request_options=request_options,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    ProjectGeneration,
+                    construct_type(
+                        type_=ProjectGeneration,  # type: ignore
                         object_=_response.json(),
                     ),
                 )
                 return HttpResponse(response=_response, data=_data)
             if _response.status_code == 401:
                 raise UnauthorizedError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 404:
+                raise NotFoundError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 409:
+                raise ConflictError(
                     typing.cast(
                         GenerationError,
                         construct_type(
@@ -476,20 +992,30 @@ class AsyncRawGenerationsClient:
         *,
         model: Model,
         input: typing.Sequence[Input],
+        idempotency_key: typing.Optional[str] = None,
         options: typing.Optional[GenerationOptions] = OMIT,
         segments: typing.Optional[typing.Sequence[GenerationSegment]] = OMIT,
+        output_audio: typing.Optional[OutputAudio] = OMIT,
         webhook_url: typing.Optional[str] = OMIT,
         output_file_name: typing.Optional[str] = OMIT,
+        dub_params: typing.Optional[DubDto] = OMIT,
+        project_id: typing.Optional[ProjectId] = OMIT,
+        dialogue_edit: typing.Optional[DialogueEditReference] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[Generation]:
         """
+        Create a lip sync generation with `application/json` — provide each input by `url` or by `assetId` from an uploaded asset. For reusable or large local files, upload them first with POST /v2/assets/upload and pass the returned `assetId`; see [Asset Uploads](/developer-guides/asset-uploads). Use the multipart "Create Generation with Files" form only when uploading direct audio, video, or image file fields; it has a 5 GiB per-file application parser limit, subject to your plan and any lower proxy limits. Nested fields such as input, options, segments, outputAudio, dubParams, and dialogueEdit must be JSON strings in multipart requests. If a `text` input requires speech synthesis and the ElevenLabs provider is temporarily unavailable, the request returns errorCode elevenlabs_service_unavailable: 504 for provider timeouts and 503 for other provider outages for unkeyed requests. Keyed uncertain outcomes return 503 IDEMPOTENCY_OUTCOME_UNKNOWN instead. An API-key request that passes dialogueEdit is refused with errorCode dialogue_edit_retime_required (422) when the organization's rollout lacks segment lipsync and section expansion. A dialogueEdit that removes more speech than the surrounding footage can absorb returns errorCode dialogue_edit_removal_too_large (422). When the failing section can be identified, `dialogueEditSection` on the error names it; change it and create a new preview before submitting again. Retrying the same preview fails again. Send the optional Idempotency-Key header on the first request and reuse it with the same payload on retries. An accepted replay returns 200 with the original generation's current state and Idempotency-Replayed: true. A retry after that generation ended FAILED or REJECTED starts a new generation instead (201). An API-key request without the header that is identical to one your organization sent in the last 60 seconds returns 409 DUPLICATE_SUBMISSION with the original generationId; send a unique Idempotency-Key with each generation you intend. See [Idempotent Requests](/api-reference/guides/idempotency) for key validation, conflicts, retention, duplicates, and uncertain-outcome recovery.
+
         Parameters
         ----------
         model : Model
             name of the model to use for generation.
 
         input : typing.Sequence[Input]
-            Array of input objects. Must include one video input item and at least one audio input item. Audio input items can be provided as either: recorded/captured audio url or a text-to-speech input with tts provider configuration. When using segments, multiple audio inputs can be provided with unique refId values.
+            Normal lipsync requests must include exactly one visual input (video or image) and one audio or text input. Dubbed lipsync requests using dubParams must include exactly one video input and no audio or text input, because Sync extracts the dubbing source audio from that video. Image inputs are only supported with the sync-3 model. When using segments, audio or text inputs can carry unique refId values.
+
+        idempotency_key : typing.Optional[str]
+            Case-sensitive organization-scoped key, 1–128 characters matching [A-Za-z0-9._~-]+. Send exactly one header. Reuse the same key and payload for retries of one action; a retry after the generation ended FAILED or REJECTED starts a new one. Use a unique key per intended generation. Retained seven days from acceptance, longer while active or unresolved. Not a JSON field.
 
         options : typing.Optional[GenerationOptions]
             additional options available for generation.
@@ -497,11 +1023,23 @@ class AsyncRawGenerationsClient:
         segments : typing.Optional[typing.Sequence[GenerationSegment]]
             segments definition list. When provided, allows defining one or more video segments with different audio inputs for each segment. Each segment specifies a time range and references an audio input by refId.
 
+        output_audio : typing.Optional[OutputAudio]
+            One audio input that plays over the whole finished output from its first second, replacing the sound of every part, lipsynced or not. Use it with segments, for example one dubbed track for a whole video where some segments set lipsync to false. When any segment sets lipsync to false and this is omitted, the only audio input is used. Not available with a custom output bucket, zero data retention or a retention override.
+
         webhook_url : typing.Optional[str]
-            webhook url for generation status updates. once the generation completes we will send a POST request to the webhook url with the generation data.
+            Webhook URL for generation status updates. When the generation reaches a terminal state, Sync sends a POST request with the generation payload and a Sync-Signature header. Verify the header with the organization webhook secret from GET /v2/organizations/webhook/secret. HTTPS is strongly recommended.
 
         output_file_name : typing.Optional[str]
-            Base filename for the generated output without extension. The .mp4 extension will be added automatically.  Only alphanumeric characters, underscores, and hyphens are allowed, up to 255 characters.
+            Base filename for the generated output without extension. The .mp4 extension will be added automatically. Only alphanumeric characters, underscores, and hyphens are allowed, up to 255 characters.
+
+        dub_params : typing.Optional[DubDto]
+            Dubbing parameters. When present, audio is extracted from the single video input, dubbed via ElevenLabs into the target language, and then lipsync is run with the dubbed audio. Do not include audio or text inputs with dubParams; requests that send both are rejected.
+
+        project_id : typing.Optional[ProjectId]
+            Optionally attach this generation to a project (created via POST /v2/projects) so it appears in Studio under that project. Must reference a project in your organization — otherwise the request is rejected with 422.
+
+        dialogue_edit : typing.Optional[DialogueEditReference]
+            Use the id of a completed dialogue edit from POST /v2/dialogue-edits to supply the audio and edited regions. Requires a preview that ran segment lipsync and section expansion (see the job's segmentLipsyncEnabled and sectionExpansionEnabled). Send exactly one video input, the same video the dialogue edit was made from, and no audio input, segments or dubParams. Billing, status, wait and webhooks work as for any generation.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -509,7 +1047,7 @@ class AsyncRawGenerationsClient:
         Returns
         -------
         AsyncHttpResponse[Generation]
-            Job created successfully
+            First acceptance returns 201, as does a keyed retry that starts a new generation after the original ended FAILED or REJECTED. An equivalent keyed replay of an active or completed generation returns 200 with this same response shape and Idempotency-Replayed: true.
         """
         _response = await self._client_wrapper.httpx_client.request(
             "v2/generate",
@@ -525,8 +1063,22 @@ class AsyncRawGenerationsClient:
                 "segments": convert_and_respect_annotation_metadata(
                     object_=segments, annotation=typing.Sequence[GenerationSegment], direction="write"
                 ),
+                "outputAudio": convert_and_respect_annotation_metadata(
+                    object_=output_audio, annotation=OutputAudio, direction="write"
+                ),
                 "webhookUrl": webhook_url,
                 "outputFileName": output_file_name,
+                "dubParams": convert_and_respect_annotation_metadata(
+                    object_=dub_params, annotation=DubDto, direction="write"
+                ),
+                "projectId": project_id,
+                "dialogueEdit": convert_and_respect_annotation_metadata(
+                    object_=dialogue_edit, annotation=DialogueEditReference, direction="write"
+                ),
+            },
+            headers={
+                "content-type": "application/json",
+                "Idempotency-Key": str(idempotency_key) if idempotency_key is not None else None,
             },
             request_options=request_options,
             omit=OMIT,
@@ -561,6 +1113,66 @@ class AsyncRawGenerationsClient:
                         ),
                     )
                 )
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 409:
+                raise ConflictError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 410:
+                raise GenerationDeletedError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 429:
+                raise GenerationTooManyRequestsError(
+                    typing.cast(
+                        GenerationConcurrencyError,
+                        construct_type(
+                            type_=GenerationConcurrencyError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 503:
+                raise ServiceUnavailableError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 504:
+                raise GatewayTimeoutError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
             if _response.status_code == 500:
                 raise InternalServerError(
                     typing.cast(
@@ -581,13 +1193,22 @@ class AsyncRawGenerationsClient:
         *,
         model: Model,
         video: typing.Optional[core.File] = OMIT,
+        image: typing.Optional[core.File] = OMIT,
         audio: typing.Optional[core.File] = OMIT,
         input: typing.Optional[typing.List[Input]] = OMIT,
         options: typing.Optional[GenerationOptions] = OMIT,
+        segments: typing.Optional[typing.List[GenerationSegment]] = OMIT,
+        output_audio: typing.Optional[OutputAudio] = OMIT,
+        dub_params: typing.Optional[DubDto] = OMIT,
         webhook_url: typing.Optional[str] = OMIT,
+        output_file_name: typing.Optional[str] = OMIT,
+        project_id: typing.Optional[ProjectId] = OMIT,
+        dialogue_edit: typing.Optional[DialogueEditReference] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[Generation]:
         """
+        The multipart/form-data form of `POST /v2/generate` — the same endpoint as "Create Generation", for uploading local files directly instead of passing URLs. Send each file under a field named for its type (`video`, `image`, `audio`), at most one of each. The application parser allows up to 5 GiB (5 × 1024³ bytes) per file, 3 files, 32 fields, 35 total parts, and 1 MiB per field. A file over the parser limit returns 413 generation_input_validation_failed, and a file over your plan limit returns 422 file_size_exceeds_plan_limit. Proxy limits may be lower; this ceiling does not guarantee a 5 GiB direct transfer. Each file is saved as an asset in your organization and passed to the generation by `assetId`. For large files, upload via POST /v2/assets/upload first and pass the `assetId`, so retries don't resend the file. Nested fields such as `input`, `options`, `segments`, `outputAudio`, `dubParams`, and `dialogueEdit` must be sent as JSON strings in multipart requests. Image inputs are sync-3 only. If a `text` input requires speech synthesis and the ElevenLabs provider is temporarily unavailable, the request returns errorCode elevenlabs_service_unavailable: 504 for provider timeouts and 503 for other provider outages for unkeyed requests. Keyed uncertain outcomes return 503 IDEMPOTENCY_OUTCOME_UNKNOWN instead. An API-key request that passes dialogueEdit is refused with errorCode dialogue_edit_retime_required (422) when the organization's rollout lacks segment lipsync and section expansion. A dialogueEdit that removes more speech than the surrounding footage can absorb returns errorCode dialogue_edit_removal_too_large (422). When the failing section can be identified, `dialogueEditSection` on the error names it; change it and create a new preview before submitting again. Retrying the same preview fails again. Send the optional Idempotency-Key header on the first request and reuse it with the same payload on retries. An accepted replay returns 200 with the original generation's current state and Idempotency-Replayed: true. A retry after that generation ended FAILED or REJECTED starts a new generation instead (201). An API-key request without the header that is identical to one your organization sent in the last 60 seconds returns 409 DUPLICATE_SUBMISSION with the original generationId; send a unique Idempotency-Key with each generation you intend. See [Idempotent Requests](/api-reference/guides/idempotency) for key validation, conflicts, retention, duplicates, and uncertain-outcome recovery.
+
         Parameters
         ----------
         model : Model
@@ -595,15 +1216,36 @@ class AsyncRawGenerationsClient:
         video : typing.Optional[core.File]
             See core.File for more documentation
 
+        image : typing.Optional[core.File]
+            See core.File for more documentation
+
         audio : typing.Optional[core.File]
             See core.File for more documentation
 
         input : typing.Optional[typing.List[Input]]
-            Array of input objects. Can be used to provide urls for larger files. Each input should either have a file or a url. Audio input items can be provided as either: recorded/captured audio url or a text-to-speech input with tts provider configuration.
+            Array of input objects, encoded as a JSON string in multipart requests. Can be used to provide URLs or assetIds for larger files. Each input should either have a file, a url, or an assetId. Audio input items can be provided as either recorded/captured audio URL or a text-to-speech input with TTS provider configuration.
 
         options : typing.Optional[GenerationOptions]
+            Optional generation options, encoded as a JSON string in multipart requests.
+
+        segments : typing.Optional[typing.List[GenerationSegment]]
+            Optional segment definitions, encoded as a JSON string in multipart requests.
+
+        output_audio : typing.Optional[OutputAudio]
+            Optional audio input that plays over the whole finished output, encoded as a JSON string in multipart requests, for example `{"refId":"dub"}`. Use with segments. The refId must name an audio input sent by url or assetId: an uploaded audio file has no refId.
+
+        dub_params : typing.Optional[DubDto]
+            Optional dubbing parameters, encoded as a JSON string in multipart requests.
 
         webhook_url : typing.Optional[str]
+
+        output_file_name : typing.Optional[str]
+
+        project_id : typing.Optional[ProjectId]
+            Optional project id to attach the generation to.
+
+        dialogue_edit : typing.Optional[DialogueEditReference]
+            Optional reference to a completed dialogue edit (its id from POST /v2/dialogue-edits) to render its preview into a video, encoded as a JSON string in multipart requests. Send one video input from the same source and no audio, segments or dubParams.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -611,7 +1253,7 @@ class AsyncRawGenerationsClient:
         Returns
         -------
         AsyncHttpResponse[Generation]
-            Job created successfully
+            First acceptance returns 201, as does a keyed retry that starts a new generation after the original ended FAILED or REJECTED. An equivalent keyed replay of an active or completed generation returns 200 with this same response shape and Idempotency-Replayed: true.
         """
         _response = await self._client_wrapper.httpx_client.request(
             "v2/generate",
@@ -620,10 +1262,17 @@ class AsyncRawGenerationsClient:
                 "model": model,
                 "input": input,
                 "options": options,
+                "segments": segments,
+                "outputAudio": output_audio,
+                "dubParams": dub_params,
                 "webhookUrl": webhook_url,
+                "outputFileName": output_file_name,
+                "projectId": project_id,
+                "dialogueEdit": dialogue_edit,
             },
             files={
                 **({"video": video} if video is not None else {}),
+                **({"image": image} if image is not None else {}),
                 **({"audio": audio} if audio is not None else {}),
             },
             request_options=request_options,
@@ -659,6 +1308,76 @@ class AsyncRawGenerationsClient:
                         ),
                     )
                 )
+            if _response.status_code == 413:
+                raise PayloadTooLargeError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 409:
+                raise ConflictError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 410:
+                raise GenerationDeletedError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 429:
+                raise GenerationTooManyRequestsError(
+                    typing.cast(
+                        GenerationConcurrencyError,
+                        construct_type(
+                            type_=GenerationConcurrencyError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 503:
+                raise ServiceUnavailableError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 504:
+                raise GatewayTimeoutError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
             if _response.status_code == 500:
                 raise InternalServerError(
                     typing.cast(
@@ -675,12 +1394,29 @@ class AsyncRawGenerationsClient:
         raise ApiError(status_code=_response.status_code, body=_response_json)
 
     async def get(
-        self, id: GenerationId, *, request_options: typing.Optional[RequestOptions] = None
+        self,
+        id: GenerationId,
+        *,
+        wait: typing.Optional[bool] = None,
+        timeout: typing.Optional[float] = None,
+        include: typing.Optional[str] = None,
+        request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[Generation]:
         """
+        Retrieve the current generation state. This /v2/generate/{id} route supports the wait, timeout and include options below.
+
         Parameters
         ----------
         id : GenerationId
+
+        wait : typing.Optional[bool]
+            When true, long-poll: hold the request open until the generation reaches a terminal status (COMPLETED/FAILED/REJECTED) or the timeout elapses, then return the latest state. Waits are short (10s max) — treat this as a convenience for jobs about to finish, and poll again (the response includes a `Retry-After: 2` header) or use a webhook for longer jobs. wait=true responses also carry `X-Sync-Wait-Mode: long_poll` and `X-Sync-Wait-Timeout-Seconds` headers. Cannot be combined with include=progress.
+
+        timeout : typing.Optional[float]
+            Max seconds to hold a wait=true request open (default 5, max 10 — values outside 1-10 are rejected with a 400). On timeout the current (non-terminal) generation is returned with HTTP 200, so check `status` and poll again, or use a webhook for long jobs.
+
+        include : typing.Optional[str]
+            Comma-separated extra fields to include. include=progress adds a progress_percent field (fetched live from the inference service).
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -693,6 +1429,11 @@ class AsyncRawGenerationsClient:
         _response = await self._client_wrapper.httpx_client.request(
             f"v2/generate/{jsonable_encoder(id)}",
             method="GET",
+            params={
+                "wait": wait,
+                "timeout": timeout,
+                "include": include,
+            },
             request_options=request_options,
         )
         try:
@@ -740,11 +1481,173 @@ class AsyncRawGenerationsClient:
             raise ApiError(status_code=_response.status_code, body=_response.text)
         raise ApiError(status_code=_response.status_code, body=_response_json)
 
+    async def download(
+        self,
+        id: GenerationId,
+        *,
+        file_name: typing.Optional[str] = None,
+        x_sync_accelerate: typing.Optional[str] = None,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> AsyncHttpResponse[str]:
+        """
+        Obtain the available full output of a completed generation in your
+        organization. Authenticate with `x-api-key`; no Studio project or user
+        session is required. Any valid API key belonging to the generation's
+        organization can request the URL.
+        
+        The successful response is an **unquoted URL in a text/plain body**,
+        not JSON, a redirect, or the video itself. Fetch that URL separately
+        without forwarding your API key.
+        
+        ```bash
+        download_url=$(curl --fail-with-body --silent --show-error \
+          -H "x-api-key: $SYNC_API_KEY" \
+          "https://api.sync.so/v2/generations/$GENERATION_ID/download") &&
+        curl --fail --location "$download_url" --output output.mov
+        ```
+        
+        The URL resolves an existing output using your organization's current
+        plan and billing-version eligibility. Free and watermark-required plans
+        receive the watermarked derivative when present. Entitled plans (such
+        as v2 Creator and v3 Starter or higher) receive the clean output when
+        available. Historical outputs can have the watermark burned in, so an
+        upgrade does not guarantee every old output becomes watermark-free.
+        Outputs created without a watermark can remain clean after a downgrade.
+        If no watermarked derivative exists, the resolver retains its existing
+        fallback to the original output; changing plans does not rewrite files.
+        This endpoint does not generate a new render or remove burned-in watermarks.
+        
+        Signed S3 URLs request seven-day validity, but credential expiry,
+        revocation, access changes, or file deletion can make them unusable
+        sooner. Request this endpoint again for a fresh signed URL while the
+        output is still available. The selected S3 file is checked before
+        signing; a successful response does not guarantee future availability.
+        Older URL-only records return their stored URL unchanged, without
+        checking its availability or extending its original expiration.
+        These URLs are download credentials: keep them private.
+        
+        Errors use the standard JSON error body and stable `errorCode`:
+        
+        | Status | Code | Meaning / next step |
+        | --- | --- | --- |
+        | 400 | — | Invalid generation UUID. |
+        | 401 | — | API key missing, invalid, or revoked. |
+        | 404 | `generation_not_found` | Missing, deleted, or outside your organization. |
+        | 404 | `generation_output_unavailable` | No eligible output reference or the selected file is missing; contact support. |
+        | 409 | `generation_not_ready` | Pending or processing; poll Get Generation until COMPLETED. |
+        | 422 | `generation_not_downloadable` | Failed or rejected; inspect the generation error. |
+        | 503 | `generation_download_unavailable` | Storage lookup or signing failed; retry with backoff. |
+        
+        Authentication also returns 422 for draft organizations. Requesting a
+        download URL does not create a project, incur a generation charge, or
+        restore deleted files.
+        
+        Parameters
+        ----------
+        id : GenerationId
+        
+        file_name : typing.Optional[str]
+            Optional download filename. Its extension is replaced with the output's format. Ignored for URL-only outputs.
+        
+        x_sync_accelerate : typing.Optional[str]
+            Send true to request transfer acceleration; falls back to the standard endpoint when acceleration is disabled.
+        
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+        
+        Returns
+        -------
+        AsyncHttpResponse[str]
+            Unquoted download URL. Read as text and fetch separately.
+        """
+        _response = await self._client_wrapper.httpx_client.request(
+            f"v2/generations/{jsonable_encoder(id)}/download",
+            method="GET",
+            params={
+                "fileName": file_name,
+            },
+            headers={
+                "x-sync-accelerate": str(x_sync_accelerate) if x_sync_accelerate is not None else None,
+            },
+            request_options=request_options,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                return _response.text  # type: ignore
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 404:
+                raise NotFoundError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 409:
+                raise ConflictError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 503:
+                raise ServiceUnavailableError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, body=_response.text)
+        raise ApiError(status_code=_response.status_code, body=_response_json)
+
     async def list(
         self,
         *,
         status: typing.Optional[typing.Sequence[GenerationStatus]] = None,
         ids: typing.Optional[typing.Sequence[str]] = None,
+        source: typing.Optional[typing.Sequence[str]] = None,
+        project_id: typing.Optional[ProjectId] = None,
+        limit: typing.Optional[int] = None,
+        cursor: typing.Optional[str] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[typing.List[Generation]]:
         """
@@ -755,6 +1658,18 @@ class AsyncRawGenerationsClient:
 
         ids : typing.Optional[typing.Sequence[str]]
             Filter generations by ID. Accepts multiple IDs as a comma-separated list.
+
+        source : typing.Optional[typing.Sequence[str]]
+            Filter generations by source. Accepts multiple sources as a comma-separated list.
+
+        project_id : typing.Optional[ProjectId]
+            Return only generations in this project. Must be a UUID. A project you can't access returns an empty list.
+
+        limit : typing.Optional[int]
+            Maximum number of generations to return (1-100). When set, results are ordered newest first and can be paged with `cursor`.
+
+        cursor : typing.Optional[str]
+            ID of the last generation on the previous page. Requires `limit`.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -770,6 +1685,10 @@ class AsyncRawGenerationsClient:
             params={
                 "status": status,
                 "ids": ids,
+                "source": source,
+                "projectId": project_id,
+                "limit": limit,
+                "cursor": cursor,
             },
             request_options=request_options,
         )
@@ -783,6 +1702,16 @@ class AsyncRawGenerationsClient:
                     ),
                 )
                 return AsyncHttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
             if _response.status_code == 401:
                 raise UnauthorizedError(
                     typing.cast(
@@ -811,59 +1740,50 @@ class AsyncRawGenerationsClient:
     async def estimate_cost(
         self,
         *,
-        model: Model,
-        input: typing.Sequence[Input],
-        options: typing.Optional[GenerationOptions] = OMIT,
-        segments: typing.Optional[typing.Sequence[GenerationSegment]] = OMIT,
-        webhook_url: typing.Optional[str] = OMIT,
-        output_file_name: typing.Optional[str] = OMIT,
+        model: str,
+        duration: float,
+        fps: typing.Optional[float] = OMIT,
+        workflow: typing.Optional[EstimateWorkflow] = OMIT,
+        reasoning_enabled: typing.Optional[bool] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
-    ) -> AsyncHttpResponse[typing.List[EstimatedGenerationCost]]:
+    ) -> AsyncHttpResponse[EstimatedGenerationCost]:
         """
+        Estimate a generation from its model and billable duration in seconds. Supply a finite positive duration and, optionally, a finite positive fps (defaults to 25 for credit-billed organizations and 30 otherwise). Set `workflow` to `translate-and-dub` to include dubbing; the response then carries a `breakdown`. `durationCheck` says whether your account and the model allow the quoted duration. No media is fetched and no generation is created. POST /v2/generate/estimate-cost is an alias of this endpoint. Invalid request fields return 400. If the billing calculation rejects the duration or frame rate, it returns 422 cost_estimate_unavailable without price fields.
+
         Parameters
         ----------
-        model : Model
-            name of the model to use for generation.
+        model : str
+            Model to estimate, for example lipsync-2 or sync-3.
 
-        input : typing.Sequence[Input]
-            Array of input objects. Must include one video input item and at least one audio input item. Audio input items can be provided as either: recorded/captured audio url or a text-to-speech input with tts provider configuration. When using segments, multiple audio inputs can be provided with unique refId values.
+        duration : float
+            Finite, positive billable duration in seconds.
 
-        options : typing.Optional[GenerationOptions]
-            additional options available for generation.
+        fps : typing.Optional[float]
+            Source video frame rate. When omitted, credit-billed organizations are quoted at 25, the rate generation admission holds credits at when the source frame rate cannot be read; other organizations at 30.
 
-        segments : typing.Optional[typing.Sequence[GenerationSegment]]
-            segments definition list. When provided, allows defining one or more video segments with different audio inputs for each segment. Each segment specifies a time range and references an audio input by refId.
+        workflow : typing.Optional[EstimateWorkflow]
+            Omit for lip-sync only. `translate-and-dub` includes dubbing and lip-sync, estimated using the source duration. Actual output duration may differ.
 
-        webhook_url : typing.Optional[str]
-            webhook url for generation status updates. once the generation completes we will send a POST request to the webhook url with the generation data.
-
-        output_file_name : typing.Optional[str]
-            Base filename for the generated output without extension. The .mp4 extension will be added automatically.  Only alphanumeric characters, underscores, and hyphens are allowed, up to 255 characters.
+        reasoning_enabled : typing.Optional[bool]
+            Include reasoning pricing when supported by the model.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
 
         Returns
         -------
-        AsyncHttpResponse[typing.List[EstimatedGenerationCost]]
-            Generations retrieved successfully
+        AsyncHttpResponse[EstimatedGenerationCost]
+            A single estimate; estimatedCredits is null for dollar-billed organizations.
         """
         _response = await self._client_wrapper.httpx_client.request(
-            "v2/analyze/cost",
+            "v2/generations/estimate",
             method="POST",
             json={
                 "model": model,
-                "input": convert_and_respect_annotation_metadata(
-                    object_=input, annotation=typing.Sequence[Input], direction="write"
-                ),
-                "options": convert_and_respect_annotation_metadata(
-                    object_=options, annotation=GenerationOptions, direction="write"
-                ),
-                "segments": convert_and_respect_annotation_metadata(
-                    object_=segments, annotation=typing.Sequence[GenerationSegment], direction="write"
-                ),
-                "webhookUrl": webhook_url,
-                "outputFileName": output_file_name,
+                "duration": duration,
+                "fps": fps,
+                "workflow": workflow,
+                "reasoningEnabled": reasoning_enabled,
             },
             request_options=request_options,
             omit=OMIT,
@@ -871,15 +1791,113 @@ class AsyncRawGenerationsClient:
         try:
             if 200 <= _response.status_code < 300:
                 _data = typing.cast(
-                    typing.List[EstimatedGenerationCost],
+                    EstimatedGenerationCost,
                     construct_type(
-                        type_=typing.List[EstimatedGenerationCost],  # type: ignore
+                        type_=EstimatedGenerationCost,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return AsyncHttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 500:
+                raise InternalServerError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, body=_response.text)
+        raise ApiError(status_code=_response.status_code, body=_response_json)
+
+    async def delete(
+        self, id: GenerationId, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> AsyncHttpResponse[ProjectGeneration]:
+        """
+        Delete a generation. Generations are organization-scoped, so any member — or an API key for the organization — can delete one. Only generations in a terminal state can be deleted; deleting one that is still processing returns 409 (errorCode `generation_not_deletable_while_processing`). Returns the deleted generation in its stored shape (`modelName`, `inputs`, `outputMediaUrl`, `deletedAt`), not the Get Generation shape.
+
+        Parameters
+        ----------
+        id : GenerationId
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        AsyncHttpResponse[ProjectGeneration]
+            The deleted generation, in the stored-generation shape.
+        """
+        _response = await self._client_wrapper.httpx_client.request(
+            f"v2/generations/{jsonable_encoder(id)}",
+            method="DELETE",
+            request_options=request_options,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    ProjectGeneration,
+                    construct_type(
+                        type_=ProjectGeneration,  # type: ignore
                         object_=_response.json(),
                     ),
                 )
                 return AsyncHttpResponse(response=_response, data=_data)
             if _response.status_code == 401:
                 raise UnauthorizedError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 404:
+                raise NotFoundError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 409:
+                raise ConflictError(
                     typing.cast(
                         GenerationError,
                         construct_type(

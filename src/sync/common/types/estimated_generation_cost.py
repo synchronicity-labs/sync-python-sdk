@@ -2,13 +2,27 @@
 
 from ...core.unchecked_base_model import UncheckedBaseModel
 import typing_extensions
+import typing
+from .estimate_duration_check import EstimateDurationCheck
 from ...core.serialization import FieldMetadata
 import pydantic
+from .estimate_breakdown import EstimateBreakdown
 from ...core.pydantic_utilities import IS_PYDANTIC_V2
-import typing
 
 
 class EstimatedGenerationCost(UncheckedBaseModel):
+    duration_check: typing_extensions.Annotated[
+        typing.Optional[EstimateDurationCheck], FieldMetadata(alias="durationCheck")
+    ] = pydantic.Field(default=None)
+    """
+    Whether your account and the selected model can generate the quoted duration right now. A price is not permission to generate; admission rechecks every limit.
+    """
+
+    breakdown: typing.Optional[EstimateBreakdown] = pydantic.Field(default=None)
+    """
+    Present for `translate-and-dub`. Top-level amounts are the combined Sync estimate. External provider charges are unpriced (null) and excluded; included dubbing has no additional Sync charge. Estimates do not reserve credits or guarantee admission.
+    """
+
     estimated_frame_count: typing_extensions.Annotated[float, FieldMetadata(alias="estimatedFrameCount")] = (
         pydantic.Field()
     )
@@ -21,6 +35,13 @@ class EstimatedGenerationCost(UncheckedBaseModel):
     )
     """
     The estimated cost of the generation in USD.
+    """
+
+    estimated_credits: typing_extensions.Annotated[typing.Optional[float], FieldMetadata(alias="estimatedCredits")] = (
+        pydantic.Field(default=None)
+    )
+    """
+    Estimated credits for credit-billed organizations; null for dollar-billed organizations.
     """
 
     if IS_PYDANTIC_V2:
