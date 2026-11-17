@@ -26,7 +26,7 @@ class Video(UncheckedBaseModel):
 
     url: typing.Optional[str] = pydantic.Field(default=None)
     """
-    URL of the video to be used for generation. Either `url` or `assetId` must be provided.
+    Absolute HTTP or HTTPS URL of the video to be used for generation. Either `url` or `assetId` must be provided. If your organization has a configured custom output bucket, an s3:// URL in that bucket is supported. A TikTok, Instagram, Facebook, or YouTube video link is imported first.
     """
 
     asset_id: typing_extensions.Annotated[typing.Optional[AssetId], FieldMetadata(alias="assetId")] = pydantic.Field(
@@ -38,12 +38,12 @@ class Video(UncheckedBaseModel):
 
     segments_secs: typing.Optional[SegmentSecs] = pydantic.Field(default=None)
     """
-    [DEPRECATED] Use the top-level [segments](/api-reference/api/generate-api/create#request.body.segments) array instead for multi-segment support.
+    [DEPRECATED] Use the top-level [segments](/docs/api-reference/api/generate-api/create#request.body.segments) array instead for multi-segment support.
     """
 
     segments_frames: typing.Optional[SegmentFrames] = pydantic.Field(default=None)
     """
-    [DEPRECATED] Use the top-level [segments](/api-reference/api/generate-api/create#request.body.segments) array instead for multi-segment support. frames 100 and 200 of the video
+    [DEPRECATED] Use the top-level [segments](/docs/api-reference/api/generate-api/create#request.body.segments) array instead for multi-segment support. frames 100 and 200 of the video
     """
 
     if IS_PYDANTIC_V2:

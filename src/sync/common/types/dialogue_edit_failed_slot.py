@@ -9,6 +9,10 @@ import typing
 
 
 class DialogueEditFailedSlot(UncheckedBaseModel):
+    """
+    An edited region that shipped with a detected defect.
+    """
+
     index: int = pydantic.Field()
     """
     Index of the region in `resultSlots`.

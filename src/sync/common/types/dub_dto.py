@@ -40,6 +40,27 @@ class DubDto(UncheckedBaseModel):
     [DEPRECATED] Ignored. Speakers are detected automatically.
     """
 
+    cloning_strength: typing_extensions.Annotated[typing.Optional[int], FieldMetadata(alias="cloningStrength")] = (
+        pydantic.Field(default=None)
+    )
+    """
+    Voice cloning strength from 1 to 10. Higher values preserve more of the source voice. Omit to use the provider default.
+    """
+
+    start_time: typing_extensions.Annotated[typing.Optional[float], FieldMetadata(alias="startTime")] = pydantic.Field(
+        default=None
+    )
+    """
+    Finite start time in seconds, within the source video. Defaults to 0. The output and billing cover only the selected range. Invalid ranges return 422 generation_input_trim_invalid.
+    """
+
+    end_time: typing_extensions.Annotated[typing.Optional[float], FieldMetadata(alias="endTime")] = pydantic.Field(
+        default=None
+    )
+    """
+    Finite end time in seconds. Must be after startTime and within the source video. Defaults to the end of the video.
+    """
+
     if IS_PYDANTIC_V2:
         model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)  # type: ignore # Pydantic v2
     else:

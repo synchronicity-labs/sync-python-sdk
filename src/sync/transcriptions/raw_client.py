@@ -19,6 +19,13 @@ from ..core.api_error import ApiError
 from ..common.types.transcription_job_id import TranscriptionJobId
 from ..core.jsonable_encoder import jsonable_encoder
 from ..common.errors.not_found_error import NotFoundError
+from ..common.types.speaker_analysis import SpeakerAnalysis
+from ..common.errors.conflict_error import ConflictError
+from ..common.errors.speaker_analysis_too_many_requests_error import SpeakerAnalysisTooManyRequestsError
+from ..common.types.speaker_face_track_slice_frames import SpeakerFaceTrackSliceFrames
+from ..common.types.speaker_face_track_slice import SpeakerFaceTrackSlice
+from ..core.serialization import convert_and_respect_annotation_metadata
+from ..common.errors.bad_request_error import BadRequestError
 from ..core.client_wrapper import AsyncClientWrapper
 from ..core.http_response import AsyncHttpResponse
 
@@ -42,7 +49,7 @@ class RawTranscriptionsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[TranscriptionJob]:
         """
-        Starts a word-level transcription of a window of a video, the first step of a dialogue edit. Provide exactly one of `sourceVideoUrl` or `sourceAudioUrl`, both hosted in sync. storage (upload via `POST /v2/assets/upload`). Passing pre-extracted audio skips the server-side download and transcode. Poll `GET /v2/transcriptions/{id}` until `status` is `COMPLETED`, then pass the `transcript` and your edits to `POST /v2/dialogue-edits`. An identical source and window returns the existing job instead of starting a new one. Transcription is not billed.
+        Starts a word-level transcription of a window of a video, the first step of a dialogue edit. Provide exactly one of `sourceVideoUrl` or `sourceAudioUrl`, both hosted in sync. storage (upload via `POST /v2/assets/upload`). Passing pre-extracted audio skips the server-side download and transcode. Poll `GET /v2/transcriptions/{id}` until `status` is `COMPLETED`, then pass the `transcript` and your edits to `POST /v2/dialogue-edits`. An identical source and window returns the existing job instead of starting a new one. An `endMs` past the end of the source is clamped to it, and the job echoes the effective end in `sourceEndMs`. Transcription is not billed.
 
         Parameters
         ----------
@@ -53,10 +60,10 @@ class RawTranscriptionsClient:
             URL of audio already extracted from the source, hosted in sync. storage. Skips the server-side audio extraction. Provide exactly one of sourceVideoUrl or sourceAudioUrl.
 
         start_ms : typing.Optional[int]
-            Start of the window to transcribe, in milliseconds from the start of the source. Defaults to 0.
+            Start of the window to transcribe, in milliseconds from the start of the source. Defaults to 0. A start at or past the end of the source video returns a 422 naming startMs.
 
         end_ms : typing.Optional[int]
-            End of the window to transcribe, in milliseconds from the start of the source. Omit to transcribe to the end. The window cannot exceed 60 minutes.
+            End of the window to transcribe, in milliseconds from the start of the source. Omit to transcribe to the end. The window cannot exceed 60 minutes. An end past the end of the source is clamped to it, and the job reports the end it used in sourceEndMs.
 
         max_source_seconds : typing.Optional[int]
             Refuse the source if it is longer than this many seconds. Useful when a later step, such as a dialogue edit (10 minute window), cannot consume a longer transcript. Cannot exceed the endpoint ceiling of 3600 seconds.
@@ -220,6 +227,352 @@ class RawTranscriptionsClient:
             raise ApiError(status_code=_response.status_code, body=_response.text)
         raise ApiError(status_code=_response.status_code, body=_response_json)
 
+    def get_speaker_analysis(
+        self, id: TranscriptionJobId, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> HttpResponse[SpeakerAnalysis]:
+        """
+        Returns which face belongs to each transcript speaker. Each speaker is matched, with an avatar, evidence and a face track, or uncertain, with a reason. Analysis may already be available for video transcriptions of your own media. Read this endpoint before starting an analysis. Poll while `status` is `processing`, until it is `completed` or `unavailable`. Requires a completed transcription.
+
+        Parameters
+        ----------
+        id : TranscriptionJobId
+            Transcription job id.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        HttpResponse[SpeakerAnalysis]
+            Speaker analysis retrieved successfully
+        """
+        _response = self._client_wrapper.httpx_client.request(
+            f"v2/transcriptions/{jsonable_encoder(id)}/speaker-analysis",
+            method="GET",
+            request_options=request_options,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    SpeakerAnalysis,
+                    construct_type(
+                        type_=SpeakerAnalysis,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return HttpResponse(response=_response, data=_data)
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 404:
+                raise NotFoundError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 409:
+                raise ConflictError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 500:
+                raise InternalServerError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, body=_response.text)
+        raise ApiError(status_code=_response.status_code, body=_response_json)
+
+    def analyze_speakers(
+        self,
+        id: TranscriptionJobId,
+        *,
+        revision: str,
+        source_video_url: str,
+        retry: typing.Optional[bool] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> HttpResponse[SpeakerAnalysis]:
+        """
+        Matches each transcript speaker to the face that talks during their words. Read `GET /v2/transcriptions/{id}/speaker-analysis` first, and call this to start an analysis that wasn't run or to retry one that ended `unavailable`. Pass the job's `revision` and `sourceVideoUrl`. Supports up to 2 minutes of video and 8 speakers, and 3 requests per minute.
+
+        Parameters
+        ----------
+        id : TranscriptionJobId
+            Transcription job id.
+
+        revision : str
+            The revision of the transcription job.
+
+        source_video_url : str
+            The transcription's source video URL.
+
+        retry : typing.Optional[bool]
+            Set to true to rerun an analysis that ended unavailable. A completed or running analysis is returned as is.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        HttpResponse[SpeakerAnalysis]
+            Speaker analysis started or returned
+        """
+        _response = self._client_wrapper.httpx_client.request(
+            f"v2/transcriptions/{jsonable_encoder(id)}/speaker-analysis",
+            method="POST",
+            json={
+                "revision": revision,
+                "sourceVideoUrl": source_video_url,
+                "retry": retry,
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    SpeakerAnalysis,
+                    construct_type(
+                        type_=SpeakerAnalysis,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return HttpResponse(response=_response, data=_data)
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 404:
+                raise NotFoundError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 409:
+                raise ConflictError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 429:
+                raise SpeakerAnalysisTooManyRequestsError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 500:
+                raise InternalServerError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, body=_response.text)
+        raise ApiError(status_code=_response.status_code, body=_response_json)
+
+    def slice_face_track(
+        self,
+        id: TranscriptionJobId,
+        *,
+        revision: str,
+        speaker_id: str,
+        start_frame: int,
+        end_frame: int,
+        fps: float,
+        skip: typing.Optional[SpeakerFaceTrackSliceFrames] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> HttpResponse[SpeakerFaceTrackSlice]:
+        """
+        Cuts frames [`startFrame`, `endFrame`) at `fps` from a matched speaker's face track and returns a bounding-boxes file for that segment. Pass the `url` as the segment's `active_speaker_detection.bounding_boxes_url` so the segment lipsyncs that speaker. `url` is null when the face is on none of those frames; leave that segment unlipsynced or use auto-detect. 60 requests per minute.
+
+        Parameters
+        ----------
+        id : TranscriptionJobId
+            Transcription job id.
+
+        revision : str
+            The revision of the transcription job.
+
+        speaker_id : str
+            Id of a matched speaker.
+
+        start_frame : int
+            First frame of the segment.
+
+        end_frame : int
+            Frame after the last frame of the segment. Must be greater than startFrame.
+
+        fps : float
+            Frame rate of your source frame grid.
+
+        skip : typing.Optional[SpeakerFaceTrackSliceFrames]
+            Frames inside the segment that its footage no longer holds, for example because a cut removed them. Must lie strictly inside the segment.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        HttpResponse[SpeakerFaceTrackSlice]
+            Face track slice created
+        """
+        _response = self._client_wrapper.httpx_client.request(
+            f"v2/transcriptions/{jsonable_encoder(id)}/speaker-analysis/face-track-slices",
+            method="POST",
+            json={
+                "revision": revision,
+                "speakerId": speaker_id,
+                "startFrame": start_frame,
+                "endFrame": end_frame,
+                "fps": fps,
+                "skip": convert_and_respect_annotation_metadata(
+                    object_=skip, annotation=SpeakerFaceTrackSliceFrames, direction="write"
+                ),
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    SpeakerFaceTrackSlice,
+                    construct_type(
+                        type_=SpeakerFaceTrackSlice,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return HttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 404:
+                raise NotFoundError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 409:
+                raise ConflictError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 429:
+                raise SpeakerAnalysisTooManyRequestsError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 500:
+                raise InternalServerError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, body=_response.text)
+        raise ApiError(status_code=_response.status_code, body=_response_json)
+
 
 class AsyncRawTranscriptionsClient:
     def __init__(self, *, client_wrapper: AsyncClientWrapper):
@@ -237,7 +590,7 @@ class AsyncRawTranscriptionsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[TranscriptionJob]:
         """
-        Starts a word-level transcription of a window of a video, the first step of a dialogue edit. Provide exactly one of `sourceVideoUrl` or `sourceAudioUrl`, both hosted in sync. storage (upload via `POST /v2/assets/upload`). Passing pre-extracted audio skips the server-side download and transcode. Poll `GET /v2/transcriptions/{id}` until `status` is `COMPLETED`, then pass the `transcript` and your edits to `POST /v2/dialogue-edits`. An identical source and window returns the existing job instead of starting a new one. Transcription is not billed.
+        Starts a word-level transcription of a window of a video, the first step of a dialogue edit. Provide exactly one of `sourceVideoUrl` or `sourceAudioUrl`, both hosted in sync. storage (upload via `POST /v2/assets/upload`). Passing pre-extracted audio skips the server-side download and transcode. Poll `GET /v2/transcriptions/{id}` until `status` is `COMPLETED`, then pass the `transcript` and your edits to `POST /v2/dialogue-edits`. An identical source and window returns the existing job instead of starting a new one. An `endMs` past the end of the source is clamped to it, and the job echoes the effective end in `sourceEndMs`. Transcription is not billed.
 
         Parameters
         ----------
@@ -248,10 +601,10 @@ class AsyncRawTranscriptionsClient:
             URL of audio already extracted from the source, hosted in sync. storage. Skips the server-side audio extraction. Provide exactly one of sourceVideoUrl or sourceAudioUrl.
 
         start_ms : typing.Optional[int]
-            Start of the window to transcribe, in milliseconds from the start of the source. Defaults to 0.
+            Start of the window to transcribe, in milliseconds from the start of the source. Defaults to 0. A start at or past the end of the source video returns a 422 naming startMs.
 
         end_ms : typing.Optional[int]
-            End of the window to transcribe, in milliseconds from the start of the source. Omit to transcribe to the end. The window cannot exceed 60 minutes.
+            End of the window to transcribe, in milliseconds from the start of the source. Omit to transcribe to the end. The window cannot exceed 60 minutes. An end past the end of the source is clamped to it, and the job reports the end it used in sourceEndMs.
 
         max_source_seconds : typing.Optional[int]
             Refuse the source if it is longer than this many seconds. Useful when a later step, such as a dialogue edit (10 minute window), cannot consume a longer transcript. Cannot exceed the endpoint ceiling of 3600 seconds.
@@ -392,6 +745,352 @@ class AsyncRawTranscriptionsClient:
                 )
             if _response.status_code == 404:
                 raise NotFoundError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 500:
+                raise InternalServerError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, body=_response.text)
+        raise ApiError(status_code=_response.status_code, body=_response_json)
+
+    async def get_speaker_analysis(
+        self, id: TranscriptionJobId, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> AsyncHttpResponse[SpeakerAnalysis]:
+        """
+        Returns which face belongs to each transcript speaker. Each speaker is matched, with an avatar, evidence and a face track, or uncertain, with a reason. Analysis may already be available for video transcriptions of your own media. Read this endpoint before starting an analysis. Poll while `status` is `processing`, until it is `completed` or `unavailable`. Requires a completed transcription.
+
+        Parameters
+        ----------
+        id : TranscriptionJobId
+            Transcription job id.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        AsyncHttpResponse[SpeakerAnalysis]
+            Speaker analysis retrieved successfully
+        """
+        _response = await self._client_wrapper.httpx_client.request(
+            f"v2/transcriptions/{jsonable_encoder(id)}/speaker-analysis",
+            method="GET",
+            request_options=request_options,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    SpeakerAnalysis,
+                    construct_type(
+                        type_=SpeakerAnalysis,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return AsyncHttpResponse(response=_response, data=_data)
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 404:
+                raise NotFoundError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 409:
+                raise ConflictError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 500:
+                raise InternalServerError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, body=_response.text)
+        raise ApiError(status_code=_response.status_code, body=_response_json)
+
+    async def analyze_speakers(
+        self,
+        id: TranscriptionJobId,
+        *,
+        revision: str,
+        source_video_url: str,
+        retry: typing.Optional[bool] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> AsyncHttpResponse[SpeakerAnalysis]:
+        """
+        Matches each transcript speaker to the face that talks during their words. Read `GET /v2/transcriptions/{id}/speaker-analysis` first, and call this to start an analysis that wasn't run or to retry one that ended `unavailable`. Pass the job's `revision` and `sourceVideoUrl`. Supports up to 2 minutes of video and 8 speakers, and 3 requests per minute.
+
+        Parameters
+        ----------
+        id : TranscriptionJobId
+            Transcription job id.
+
+        revision : str
+            The revision of the transcription job.
+
+        source_video_url : str
+            The transcription's source video URL.
+
+        retry : typing.Optional[bool]
+            Set to true to rerun an analysis that ended unavailable. A completed or running analysis is returned as is.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        AsyncHttpResponse[SpeakerAnalysis]
+            Speaker analysis started or returned
+        """
+        _response = await self._client_wrapper.httpx_client.request(
+            f"v2/transcriptions/{jsonable_encoder(id)}/speaker-analysis",
+            method="POST",
+            json={
+                "revision": revision,
+                "sourceVideoUrl": source_video_url,
+                "retry": retry,
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    SpeakerAnalysis,
+                    construct_type(
+                        type_=SpeakerAnalysis,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return AsyncHttpResponse(response=_response, data=_data)
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 404:
+                raise NotFoundError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 409:
+                raise ConflictError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 429:
+                raise SpeakerAnalysisTooManyRequestsError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 500:
+                raise InternalServerError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, body=_response.text)
+        raise ApiError(status_code=_response.status_code, body=_response_json)
+
+    async def slice_face_track(
+        self,
+        id: TranscriptionJobId,
+        *,
+        revision: str,
+        speaker_id: str,
+        start_frame: int,
+        end_frame: int,
+        fps: float,
+        skip: typing.Optional[SpeakerFaceTrackSliceFrames] = OMIT,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> AsyncHttpResponse[SpeakerFaceTrackSlice]:
+        """
+        Cuts frames [`startFrame`, `endFrame`) at `fps` from a matched speaker's face track and returns a bounding-boxes file for that segment. Pass the `url` as the segment's `active_speaker_detection.bounding_boxes_url` so the segment lipsyncs that speaker. `url` is null when the face is on none of those frames; leave that segment unlipsynced or use auto-detect. 60 requests per minute.
+
+        Parameters
+        ----------
+        id : TranscriptionJobId
+            Transcription job id.
+
+        revision : str
+            The revision of the transcription job.
+
+        speaker_id : str
+            Id of a matched speaker.
+
+        start_frame : int
+            First frame of the segment.
+
+        end_frame : int
+            Frame after the last frame of the segment. Must be greater than startFrame.
+
+        fps : float
+            Frame rate of your source frame grid.
+
+        skip : typing.Optional[SpeakerFaceTrackSliceFrames]
+            Frames inside the segment that its footage no longer holds, for example because a cut removed them. Must lie strictly inside the segment.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        AsyncHttpResponse[SpeakerFaceTrackSlice]
+            Face track slice created
+        """
+        _response = await self._client_wrapper.httpx_client.request(
+            f"v2/transcriptions/{jsonable_encoder(id)}/speaker-analysis/face-track-slices",
+            method="POST",
+            json={
+                "revision": revision,
+                "speakerId": speaker_id,
+                "startFrame": start_frame,
+                "endFrame": end_frame,
+                "fps": fps,
+                "skip": convert_and_respect_annotation_metadata(
+                    object_=skip, annotation=SpeakerFaceTrackSliceFrames, direction="write"
+                ),
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    SpeakerFaceTrackSlice,
+                    construct_type(
+                        type_=SpeakerFaceTrackSlice,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return AsyncHttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 404:
+                raise NotFoundError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 409:
+                raise ConflictError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 422:
+                raise UnprocessableEntityError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 429:
+                raise SpeakerAnalysisTooManyRequestsError(
                     typing.cast(
                         GenerationError,
                         construct_type(

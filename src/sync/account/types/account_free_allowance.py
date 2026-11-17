@@ -13,7 +13,7 @@ import typing
 class AccountFreeAllowance(UncheckedBaseModel):
     generations: AccountAllowanceUsage = pydantic.Field()
     """
-    Free lipsync generations. In-flight generations count as used.
+    Free lipsync generation allowance.
     """
 
     speech: AccountAllowanceUsage = pydantic.Field()
@@ -23,7 +23,7 @@ class AccountFreeAllowance(UncheckedBaseModel):
 
     resets_at: typing_extensions.Annotated[dt.datetime, FieldMetadata(alias="resetsAt")] = pydantic.Field()
     """
-    When the free month resets. It is anchored to the day the organization was created.
+    When the free allowance renews.
     """
 
     if IS_PYDANTIC_V2:

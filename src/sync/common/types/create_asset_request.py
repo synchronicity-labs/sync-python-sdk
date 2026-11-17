@@ -19,7 +19,7 @@ class CreateAssetRequest(UncheckedBaseModel):
 
     url: str = pydantic.Field()
     """
-    The public URL of the media to register — e.g. the url returned by POST /v2/assets/upload. Registration verifies the upload happened and enforces plan limits on the actual file size.
+    The public URL of the media to register — e.g. the url returned by POST /v2/assets/upload. Registration verifies the upload happened and enforces plan limits on the actual file size. A link to a single TikTok, Instagram, Facebook, or YouTube video is imported as a VIDEO asset instead.
     """
 
     type: AssetType = pydantic.Field()
@@ -83,6 +83,13 @@ class CreateAssetRequest(UncheckedBaseModel):
     height: typing.Optional[int] = pydantic.Field(default=None)
     """
     Height in pixels for video or image assets.
+    """
+
+    content_sha256: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="contentSha256")] = (
+        pydantic.Field(default=None)
+    )
+    """
+    SHA-256 digest of the file's bytes, as 64 lowercase hex characters.
     """
 
     if IS_PYDANTIC_V2:

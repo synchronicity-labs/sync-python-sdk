@@ -16,7 +16,7 @@ class DialogueEditError(UncheckedBaseModel):
 
     code: DialogueEditErrorCode = pydantic.Field()
     """
-    Machine-readable failure code. EDIT_TOO_LONG, SOURCE_TOO_LONG, VOICE_SAMPLE_TOO_SHORT and PLAN_FAILED describe the request and will not succeed on retry.
+    Machine-readable failure code. EDIT_TOO_LONG, SOURCE_TOO_LONG, VOICE_SAMPLE_TOO_SHORT, VOICE_BLOCKED, VOICE_VERIFICATION_REQUIRED and PLAN_FAILED describe the request and will not succeed on retry.
     """
 
     message: str = pydantic.Field()
@@ -29,6 +29,20 @@ class DialogueEditError(UncheckedBaseModel):
     )
     """
     For EDIT_TOO_LONG: the replacement text that does not fit the time its span has to occupy. Shorten it and resubmit.
+    """
+
+    word_ids: typing_extensions.Annotated[typing.Optional[typing.List[str]], FieldMetadata(alias="wordIds")] = (
+        pydantic.Field(default=None)
+    )
+    """
+    For EDIT_TOO_LONG: ids of the transcript words the span replaces, in transcript order. Includes unedited words regenerated with the edit.
+    """
+
+    speaker_id: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="speakerId")] = pydantic.Field(
+        default=None
+    )
+    """
+    For VOICE_BLOCKED, the speaker whose voice cannot be cloned.
     """
 
     if IS_PYDANTIC_V2:

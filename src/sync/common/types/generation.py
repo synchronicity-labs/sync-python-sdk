@@ -11,9 +11,11 @@ from .input import Input
 from .model import Model
 from .generation_options import GenerationOptions
 from .generation_segment import GenerationSegment
+from .asset_id import AssetId
 from .generation_status import GenerationStatus
 from .project_id import ProjectId
 from .generation_estimate import GenerationEstimate
+from .generation_progress import GenerationProgress
 from ...core.pydantic_utilities import IS_PYDANTIC_V2
 
 
@@ -25,14 +27,14 @@ class Generation(UncheckedBaseModel):
 
     error: typing.Optional[str] = pydantic.Field(default=None)
     """
-    The error message if the generation failed.
+    The error message if the generation failed, was rejected or lip-synced nothing (NO_OP).
     """
 
     error_code: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="errorCode")] = pydantic.Field(
         default=None
     )
     """
-    Stable, machine-readable error code if the generation failed (e.g. generation_input_video_inaccessible). The full catalog of codes, messages and suggested fixes is served unauthenticated at GET /v2/errors.
+    Stable, machine-readable error code if the generation failed, was rejected or lip-synced nothing (NO_OP) (e.g. generation_input_video_inaccessible). The full catalog of codes, messages and suggested fixes is served unauthenticated at GET /v2/errors.
     """
 
     id: GenerationId
@@ -84,6 +86,20 @@ class Generation(UncheckedBaseModel):
     The URL of the segment output media.
     """
 
+    dub_audio_url: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="dubAudioUrl")] = (
+        pydantic.Field(default=None)
+    )
+    """
+    Dubbed audio URL. Omitted for generations without dubParams; null until the dubbed track is available.
+    """
+
+    dub_audio_asset_id: typing_extensions.Annotated[
+        typing.Optional[AssetId], FieldMetadata(alias="dubAudioAssetId")
+    ] = pydantic.Field(default=None)
+    """
+    Reusable AUDIO asset for the dubbed track. Omitted without dubParams; null until available, or when retention settings or a custom output bucket prevent saving an asset.
+    """
+
     synthesized_audio_url: typing_extensions.Annotated[
         typing.Optional[str], FieldMetadata(alias="synthesizedAudioUrl")
     ] = pydantic.Field(default=None)
@@ -114,12 +130,12 @@ class Generation(UncheckedBaseModel):
         typing.Optional[GenerationEstimate], FieldMetadata(alias="generationEstimate")
     ] = pydantic.Field(default=None)
     """
-    A completion-time estimate captured once when the generation is accepted. Populated only for generations created in sync's own apps, such as Sync Studio; the field is absent for generations created through the API today.
+    A completion-time estimate captured once when the generation is accepted. Populated only for generations created in sync's own apps, such as Sync Studio; the field is absent for generations created through the API today. To get an expected finish time for any generation, request it with include=progress and read `progress.estimatedFinishAt`.
     """
 
-    progress_percent: typing.Optional[float] = pydantic.Field(default=None)
+    progress: typing.Optional[GenerationProgress] = pydantic.Field(default=None)
     """
-    Generation progress from 0 to 100. Only present on Get Generation with `include=progress`.
+    Render progress and expected finish. Only included when the generation is requested with include=progress.
     """
 
     if IS_PYDANTIC_V2:

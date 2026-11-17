@@ -24,7 +24,7 @@ class Image(UncheckedBaseModel):
 
     url: typing.Optional[str] = pydantic.Field(default=None)
     """
-    URL of the image to be used for generation. Either `url` or `assetId` must be provided.
+    Absolute HTTP or HTTPS URL of the image to be used for generation. Either `url` or `assetId` must be provided. If your organization has a configured custom output bucket, an s3:// URL in that bucket is supported.
     """
 
     asset_id: typing_extensions.Annotated[typing.Optional[AssetId], FieldMetadata(alias="assetId")] = pydantic.Field(

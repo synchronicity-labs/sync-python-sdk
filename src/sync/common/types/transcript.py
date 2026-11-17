@@ -6,6 +6,7 @@ from .transcript_segment import TranscriptSegment
 import pydantic
 import typing_extensions
 from ...core.serialization import FieldMetadata
+from .transcript_speaker import TranscriptSpeaker
 from ...core.pydantic_utilities import IS_PYDANTIC_V2
 
 
@@ -22,6 +23,11 @@ class Transcript(UncheckedBaseModel):
     speaker_count: typing_extensions.Annotated[int, FieldMetadata(alias="speakerCount")] = pydantic.Field()
     """
     The number of distinct speakers detected.
+    """
+
+    speakers: typing.Optional[typing.List[TranscriptSpeaker]] = pydantic.Field(default=None)
+    """
+    Speakers in the transcript. Word speakerId values refer to these IDs. Absent on older transcripts.
     """
 
     if IS_PYDANTIC_V2:

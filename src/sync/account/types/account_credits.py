@@ -11,7 +11,7 @@ import typing
 class AccountCredits(UncheckedBaseModel):
     available: float = pydantic.Field()
     """
-    Credits that can be spent now: the balance minus credits reserved by in-flight jobs. 1 credit = $0.01.
+    Credits currently available for generation usage.
     """
 
     period_grant: typing_extensions.Annotated[float, FieldMetadata(alias="periodGrant")] = pydantic.Field()

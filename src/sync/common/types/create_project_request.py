@@ -23,7 +23,7 @@ class CreateProjectRequest(UncheckedBaseModel):
 
     name: str = pydantic.Field()
     """
-    A name for the project.
+    A name for the project (1–255 characters).
     """
 
     description: typing.Optional[str] = pydantic.Field(default=None)

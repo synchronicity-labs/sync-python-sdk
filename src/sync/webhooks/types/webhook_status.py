@@ -2,4 +2,4 @@
 
 import typing
 
-WebhookStatus = typing.Union[typing.Literal["COMPLETED", "FAILED", "REJECTED"], typing.Any]
+WebhookStatus = typing.Union[typing.Literal["COMPLETED", "NO_OP", "FAILED", "REJECTED"], typing.Any]

@@ -100,14 +100,14 @@ class DialogueEditJob(UncheckedBaseModel):
         pydantic.Field()
     )
     """
-    Whether the preview was cut for per-region lipsync (true) or for re-lipsyncing the whole window (false). Decided when the job is created and fixed for its lifetime. For jobs created with an API key, the rollout is evaluated against the organization's members.
+    Whether the preview was cut for per-region lipsync (true) or for re-lipsyncing the whole window (false). Decided when the job is created and fixed for its lifetime. True for new jobs.
     """
 
     section_expansion_enabled: typing_extensions.Annotated[bool, FieldMetadata(alias="sectionExpansionEnabled")] = (
         pydantic.Field()
     )
     """
-    Whether the preview was made under the section-expansion policy. Decided when the job is created and fixed for its lifetime. For jobs created with an API key, the rollout is evaluated against the organization's members.
+    Whether the preview was made under the section-expansion policy. Decided when the job is created and fixed for its lifetime. True for new jobs.
     """
 
     voice_id: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="voiceId")] = pydantic.Field(

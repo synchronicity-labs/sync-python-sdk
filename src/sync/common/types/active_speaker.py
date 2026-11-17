@@ -13,7 +13,7 @@ class ActiveSpeaker(UncheckedBaseModel):
 
     auto_detect: typing.Optional[bool] = pydantic.Field(default=None)
     """
-    Whether to automatically detect and apply generation to the active speaker
+    Automatically detect the active speaker when set to true. When this object is present, the field defaults to false.
     """
 
     v3: typing.Optional[bool] = pydantic.Field(default=None)
@@ -23,7 +23,7 @@ class ActiveSpeaker(UncheckedBaseModel):
 
     frame_number: typing.Optional[int] = pydantic.Field(default=None)
     """
-    Frame index that corresponds to the provided coordinates for manual speaker selection
+    Zero-based frame index for the provided coordinates. Counts from the video start at top level and from the segment start in a segment override.
     """
 
     coordinates: typing.Optional[typing.List[int]] = pydantic.Field(default=None)
@@ -33,7 +33,7 @@ class ActiveSpeaker(UncheckedBaseModel):
 
     bounding_boxes: typing.Optional[typing.List[typing.Optional[typing.List[int]]]] = pydantic.Field(default=None)
     """
-    Per-frame array of bounding boxes [x1, y1, x2, y2] for the detected face, or null if no box for that frame. Use instead of frame_number + coordinates when you already have detection data.
+    Per-frame array of bounding boxes, each exactly four integers [x1, y1, x2, y2] for the detected face, or null or [] if no box for that frame. Use instead of frame_number + coordinates when you already have detection data.
     """
 
     bounding_boxes_url: typing.Optional[str] = pydantic.Field(default=None)

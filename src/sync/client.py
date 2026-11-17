@@ -8,6 +8,7 @@ from .core.api_error import ApiError
 from .core.client_wrapper import SyncClientWrapper
 from .account.client import AccountClient
 from .assets.client import AssetsClient
+from .audio_trims.client import AudioTrimsClient
 from .batch.client import BatchClient
 from .dialogue_edits.client import DialogueEditsClient
 from .errors.client import ErrorsClient
@@ -22,6 +23,7 @@ from .voices.client import VoicesClient
 from .core.client_wrapper import AsyncClientWrapper
 from .account.client import AsyncAccountClient
 from .assets.client import AsyncAssetsClient
+from .audio_trims.client import AsyncAudioTrimsClient
 from .batch.client import AsyncBatchClient
 from .dialogue_edits.client import AsyncDialogueEditsClient
 from .errors.client import AsyncErrorsClient
@@ -99,6 +101,7 @@ class Sync:
         )
         self.account = AccountClient(client_wrapper=self._client_wrapper)
         self.assets = AssetsClient(client_wrapper=self._client_wrapper)
+        self.audio_trims = AudioTrimsClient(client_wrapper=self._client_wrapper)
         self.batch = BatchClient(client_wrapper=self._client_wrapper)
         self.dialogue_edits = DialogueEditsClient(client_wrapper=self._client_wrapper)
         self.errors = ErrorsClient(client_wrapper=self._client_wrapper)
@@ -176,6 +179,7 @@ class AsyncSync:
         )
         self.account = AsyncAccountClient(client_wrapper=self._client_wrapper)
         self.assets = AsyncAssetsClient(client_wrapper=self._client_wrapper)
+        self.audio_trims = AsyncAudioTrimsClient(client_wrapper=self._client_wrapper)
         self.batch = AsyncBatchClient(client_wrapper=self._client_wrapper)
         self.dialogue_edits = AsyncDialogueEditsClient(client_wrapper=self._client_wrapper)
         self.errors = AsyncErrorsClient(client_wrapper=self._client_wrapper)

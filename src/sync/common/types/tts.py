@@ -24,7 +24,7 @@ class Tts(UncheckedBaseModel):
         default=None
     )
     """
-    Reference identifier for this audio input, used to link audio inputs to specific segments when using [segments](/api-reference/api/generate-api/create#request.body.segments). Required when using segments array.
+    Reference identifier for this audio input, used to link audio inputs to specific segments when using [segments](/docs/api-reference/api/generate-api/create#request.body.segments). Required when using segments array.
     """
 
     if IS_PYDANTIC_V2:

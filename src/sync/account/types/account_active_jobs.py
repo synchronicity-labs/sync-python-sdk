@@ -9,7 +9,7 @@ import typing
 class AccountActiveJobs(UncheckedBaseModel):
     generations: int = pydantic.Field()
     """
-    In-flight video lipsync generations. Compare with limits.concurrency; batch generations are included here and count toward it only below the Scale plan.
+    In-flight video lipsync generations. Compare with limits.concurrency; batch generations are included here but do not count toward it.
     """
 
     total: int = pydantic.Field()

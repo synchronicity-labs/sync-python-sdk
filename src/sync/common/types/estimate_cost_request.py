@@ -22,7 +22,7 @@ class EstimateCostRequest(UncheckedBaseModel):
 
     fps: typing.Optional[float] = pydantic.Field(default=None)
     """
-    Source video frame rate. When omitted, credit-billed organizations are quoted at 25, the rate generation admission holds credits at when the source frame rate cannot be read; other organizations at 30.
+    Finite, positive source video frame rate. For standard plans, defaults to 25 for credit billing and 30 for usage billing when omitted.
     """
 
     workflow: typing.Optional[EstimateWorkflow] = pydantic.Field(default=None)

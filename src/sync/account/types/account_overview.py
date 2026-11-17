@@ -5,6 +5,7 @@ import typing
 from .account_user import AccountUser
 import pydantic
 from .account_organization import AccountOrganization
+from .account_organization_list_item import AccountOrganizationListItem
 import typing_extensions
 from .account_credential_type import AccountCredentialType
 from ...core.serialization import FieldMetadata
@@ -30,7 +31,12 @@ class AccountOverview(UncheckedBaseModel):
 
     organization: AccountOrganization = pydantic.Field()
     """
-    The organization every request with this credential acts in.
+    The organization selected for this request, or the credential's default organization.
+    """
+
+    organizations: typing.List[AccountOrganizationListItem] = pydantic.Field()
+    """
+    Organizations these credentials can access, current one first.
     """
 
     credential_type: typing_extensions.Annotated[AccountCredentialType, FieldMetadata(alias="credentialType")] = (
@@ -84,6 +90,11 @@ class AccountOverview(UncheckedBaseModel):
     billing_url: typing_extensions.Annotated[str, FieldMetadata(alias="billingUrl")] = pydantic.Field()
     """
     Studio billing page where a person can change plan, pay, top up or update the payment method. It needs a signed-in browser.
+    """
+
+    features: typing.List[str] = pydantic.Field()
+    """
+    API features currently available to these credentials. New names may be added.
     """
 
     if IS_PYDANTIC_V2:

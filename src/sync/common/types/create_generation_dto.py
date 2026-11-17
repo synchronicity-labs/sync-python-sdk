@@ -24,7 +24,7 @@ class CreateGenerationDto(UncheckedBaseModel):
 
     input: typing.List[Input] = pydantic.Field()
     """
-    Normal lipsync requests must include exactly one visual input (video or image) and one audio or text input. Dubbed lipsync requests using dubParams must include exactly one video input and no audio or text input, because Sync extracts the dubbing source audio from that video. Image inputs are only supported with the sync-3 model. When using segments, audio or text inputs can carry unique refId values.
+    Normal lipsync requests must include exactly one visual input (video or image) and one audio or text input. Dubbed lipsync requests using dubParams must include exactly one video input and no audio or text input, because Sync extracts the dubbing source audio from that video. Image inputs are only supported with the sync-3 model. When using segments, audio or text inputs can carry unique refId values. At most 102 inputs.
     """
 
     options: typing.Optional[GenerationOptions] = pydantic.Field(default=None)
@@ -34,7 +34,7 @@ class CreateGenerationDto(UncheckedBaseModel):
 
     segments: typing.Optional[typing.List[GenerationSegment]] = pydantic.Field(default=None)
     """
-    segments definition list. When provided, allows defining one or more video segments with different audio inputs for each segment. Each segment specifies a time range and references an audio input by refId.
+    segments definition list. When provided, allows defining one or more video segments with different audio inputs for each segment. Each segment specifies a time range and references an audio input by refId. At most 100 segments.
     """
 
     output_audio: typing_extensions.Annotated[typing.Optional[OutputAudio], FieldMetadata(alias="outputAudio")] = (
@@ -76,7 +76,7 @@ class CreateGenerationDto(UncheckedBaseModel):
         typing.Optional[DialogueEditReference], FieldMetadata(alias="dialogueEdit")
     ] = pydantic.Field(default=None)
     """
-    Use the id of a completed dialogue edit from POST /v2/dialogue-edits to supply the audio and edited regions. Requires a preview that ran segment lipsync and section expansion (see the job's segmentLipsyncEnabled and sectionExpansionEnabled). Send exactly one video input, the same video the dialogue edit was made from, and no audio input, segments or dubParams. Billing, status, wait and webhooks work as for any generation.
+    Use the id of a completed dialogue edit from POST /v2/dialogue-edits to supply the audio and edited regions. Requires a preview that ran segment lipsync and section expansion (see the job's segmentLipsyncEnabled and sectionExpansionEnabled). Send exactly one video input, the same video the dialogue edit was made from, and no audio input, segments or dubParams. Billing, status, wait and webhooks work as for any generation. Also accepted in batch rows for organizations with dialogue-edit batches enabled.
     """
 
     if IS_PYDANTIC_V2:

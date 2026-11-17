@@ -6,11 +6,14 @@ from ..core.request_options import RequestOptions
 from ..core.http_response import HttpResponse
 from .types.account_overview import AccountOverview
 from ..core.unchecked_base_model import construct_type
-from ..common.errors.unauthorized_error import UnauthorizedError
+from ..common.errors.bad_request_error import BadRequestError
 from ..common.types.generation_error import GenerationError
+from ..common.errors.unauthorized_error import UnauthorizedError
+from ..common.errors.forbidden_error import ForbiddenError
 from ..common.errors.internal_server_error import InternalServerError
 from json.decoder import JSONDecodeError
 from ..core.api_error import ApiError
+from .types.account_organizations import AccountOrganizations
 from ..core.client_wrapper import AsyncClientWrapper
 from ..core.http_response import AsyncHttpResponse
 
@@ -19,12 +22,17 @@ class RawAccountClient:
     def __init__(self, *, client_wrapper: SyncClientWrapper):
         self._client_wrapper = client_wrapper
 
-    def get(self, *, request_options: typing.Optional[RequestOptions] = None) -> HttpResponse[AccountOverview]:
+    def get(
+        self, *, organization_id: typing.Optional[str] = None, request_options: typing.Optional[RequestOptions] = None
+    ) -> HttpResponse[AccountOverview]:
         """
         Get the account, plan, limits and balance behind these credentials. Call it before submitting work to check plan limits and remaining credits or free allowance, and after a 402, 403 or 429 to decide how to recover: `billingModel` says whether to top up credits (`credits`), pay or update the payment method (`usage`), upgrade (`free`) or contact sync. (`enterprise`). Send people to `billingUrl` for anything that needs a payment.
 
         Parameters
         ----------
+        organization_id : typing.Optional[str]
+            Organization ID from List Organizations. Omit to use the credential's default organization.
+
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
 
@@ -36,6 +44,9 @@ class RawAccountClient:
         _response = self._client_wrapper.httpx_client.request(
             "v2/account",
             method="GET",
+            headers={
+                "x-sync-organization-id": str(organization_id) if organization_id is not None else None,
+            },
             request_options=request_options,
         )
         try:
@@ -48,8 +59,28 @@ class RawAccountClient:
                     ),
                 )
                 return HttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
             if _response.status_code == 401:
                 raise UnauthorizedError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 403:
+                raise ForbiddenError(
                     typing.cast(
                         GenerationError,
                         construct_type(
@@ -73,19 +104,93 @@ class RawAccountClient:
             raise ApiError(status_code=_response.status_code, body=_response.text)
         raise ApiError(status_code=_response.status_code, body=_response_json)
 
+    def list_organizations(
+        self, *, organization_id: typing.Optional[str] = None, request_options: typing.Optional[RequestOptions] = None
+    ) -> HttpResponse[AccountOrganizations]:
+        """
+        List the organizations these credentials can access, current one first. An API key lists only its own organization. An OAuth connection lists the organizations selected when it was connected. Send an ID as x-sync-organization-id on subsequent requests to select that organization. An inaccessible organization returns 403; an invalid ID returns 400.
+
+        Parameters
+        ----------
+        organization_id : typing.Optional[str]
+            Organization ID from this list. Omit to use the credential's default organization.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        HttpResponse[AccountOrganizations]
+        """
+        _response = self._client_wrapper.httpx_client.request(
+            "v2/account/organizations",
+            method="GET",
+            headers={
+                "x-sync-organization-id": str(organization_id) if organization_id is not None else None,
+            },
+            request_options=request_options,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    AccountOrganizations,
+                    construct_type(
+                        type_=AccountOrganizations,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return HttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 403:
+                raise ForbiddenError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, body=_response.text)
+        raise ApiError(status_code=_response.status_code, body=_response_json)
+
 
 class AsyncRawAccountClient:
     def __init__(self, *, client_wrapper: AsyncClientWrapper):
         self._client_wrapper = client_wrapper
 
     async def get(
-        self, *, request_options: typing.Optional[RequestOptions] = None
+        self, *, organization_id: typing.Optional[str] = None, request_options: typing.Optional[RequestOptions] = None
     ) -> AsyncHttpResponse[AccountOverview]:
         """
         Get the account, plan, limits and balance behind these credentials. Call it before submitting work to check plan limits and remaining credits or free allowance, and after a 402, 403 or 429 to decide how to recover: `billingModel` says whether to top up credits (`credits`), pay or update the payment method (`usage`), upgrade (`free`) or contact sync. (`enterprise`). Send people to `billingUrl` for anything that needs a payment.
 
         Parameters
         ----------
+        organization_id : typing.Optional[str]
+            Organization ID from List Organizations. Omit to use the credential's default organization.
+
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
 
@@ -97,6 +202,9 @@ class AsyncRawAccountClient:
         _response = await self._client_wrapper.httpx_client.request(
             "v2/account",
             method="GET",
+            headers={
+                "x-sync-organization-id": str(organization_id) if organization_id is not None else None,
+            },
             request_options=request_options,
         )
         try:
@@ -109,6 +217,16 @@ class AsyncRawAccountClient:
                     ),
                 )
                 return AsyncHttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
             if _response.status_code == 401:
                 raise UnauthorizedError(
                     typing.cast(
@@ -119,8 +237,89 @@ class AsyncRawAccountClient:
                         ),
                     )
                 )
+            if _response.status_code == 403:
+                raise ForbiddenError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
             if _response.status_code == 500:
                 raise InternalServerError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, body=_response.text)
+        raise ApiError(status_code=_response.status_code, body=_response_json)
+
+    async def list_organizations(
+        self, *, organization_id: typing.Optional[str] = None, request_options: typing.Optional[RequestOptions] = None
+    ) -> AsyncHttpResponse[AccountOrganizations]:
+        """
+        List the organizations these credentials can access, current one first. An API key lists only its own organization. An OAuth connection lists the organizations selected when it was connected. Send an ID as x-sync-organization-id on subsequent requests to select that organization. An inaccessible organization returns 403; an invalid ID returns 400.
+
+        Parameters
+        ----------
+        organization_id : typing.Optional[str]
+            Organization ID from this list. Omit to use the credential's default organization.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        AsyncHttpResponse[AccountOrganizations]
+        """
+        _response = await self._client_wrapper.httpx_client.request(
+            "v2/account/organizations",
+            method="GET",
+            headers={
+                "x-sync-organization-id": str(organization_id) if organization_id is not None else None,
+            },
+            request_options=request_options,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    AccountOrganizations,
+                    construct_type(
+                        type_=AccountOrganizations,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return AsyncHttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 403:
+                raise ForbiddenError(
                     typing.cast(
                         GenerationError,
                         construct_type(

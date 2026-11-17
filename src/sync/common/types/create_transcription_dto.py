@@ -32,14 +32,14 @@ class CreateTranscriptionDto(UncheckedBaseModel):
         default=None
     )
     """
-    Start of the window to transcribe, in milliseconds from the start of the source. Defaults to 0.
+    Start of the window to transcribe, in milliseconds from the start of the source. Defaults to 0. A start at or past the end of the source video returns a 422 naming startMs.
     """
 
     end_ms: typing_extensions.Annotated[typing.Optional[int], FieldMetadata(alias="endMs")] = pydantic.Field(
         default=None
     )
     """
-    End of the window to transcribe, in milliseconds from the start of the source. Omit to transcribe to the end. The window cannot exceed 60 minutes.
+    End of the window to transcribe, in milliseconds from the start of the source. Omit to transcribe to the end. The window cannot exceed 60 minutes. An end past the end of the source is clamped to it, and the job reports the end it used in sourceEndMs.
     """
 
     max_source_seconds: typing_extensions.Annotated[typing.Optional[int], FieldMetadata(alias="maxSourceSeconds")] = (

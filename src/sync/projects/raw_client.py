@@ -52,7 +52,7 @@ class RawProjectsClient:
         Parameters
         ----------
         name : str
-            A name for the project.
+            A name for the project (1–255 characters).
 
         id : typing.Optional[str]
             Optional client-supplied project id (UUID) for idempotent creation. Re-sending the same id returns the existing project instead of creating a duplicate; the other request fields are ignored on such a replay. Fails with 409 if the id already belongs to a different user or organization, or to a deleted project.
@@ -174,7 +174,7 @@ class RawProjectsClient:
             Maximum number of projects to return (1-100). Defaults to 10.
 
         cursor : typing.Optional[str]
-            Cursor for pagination.
+            The nextCursor UUID returned by the previous page. A non-UUID value returns 400.
 
         search_query : typing.Optional[str]
             Search projects by name.
@@ -489,7 +489,7 @@ class RawProjectsClient:
         id : ProjectId
 
         name : typing.Optional[str]
-            A new name for the project.
+            A new name for the project (1–255 characters).
 
         description : typing.Optional[str]
             A new description for the project.
@@ -695,7 +695,7 @@ class AsyncRawProjectsClient:
         Parameters
         ----------
         name : str
-            A name for the project.
+            A name for the project (1–255 characters).
 
         id : typing.Optional[str]
             Optional client-supplied project id (UUID) for idempotent creation. Re-sending the same id returns the existing project instead of creating a duplicate; the other request fields are ignored on such a replay. Fails with 409 if the id already belongs to a different user or organization, or to a deleted project.
@@ -817,7 +817,7 @@ class AsyncRawProjectsClient:
             Maximum number of projects to return (1-100). Defaults to 10.
 
         cursor : typing.Optional[str]
-            Cursor for pagination.
+            The nextCursor UUID returned by the previous page. A non-UUID value returns 400.
 
         search_query : typing.Optional[str]
             Search projects by name.
@@ -1134,7 +1134,7 @@ class AsyncRawProjectsClient:
         id : ProjectId
 
         name : typing.Optional[str]
-            A new name for the project.
+            A new name for the project (1–255 characters).
 
         description : typing.Optional[str]
             A new description for the project.

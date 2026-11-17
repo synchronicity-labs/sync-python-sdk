@@ -5,10 +5,13 @@ from ..core.client_wrapper import SyncClientWrapper
 from .raw_client import RawAssetsClient
 from ..common.types.asset_sort import AssetSort
 from ..common.types.asset_type import AssetType
+from ..common.types.asset_audio_source import AssetAudioSource
 from ..core.request_options import RequestOptions
 from ..common.types.paginated_assets_response import PaginatedAssetsResponse
-from ..common.types.asset_id import AssetId
+from ..common.types.asset_ids import AssetIds
 from ..common.types.asset import Asset
+from ..common.types.asset_id import AssetId
+from ..common.types.find_uploaded_asset_response import FindUploadedAssetResponse
 from ..common.types.asset_upload_response import AssetUploadResponse
 from ..common.types.asset_visibility import AssetVisibility
 from ..common.types.project_id import ProjectId
@@ -45,6 +48,7 @@ class AssetsClient:
         search_query: typing.Optional[str] = None,
         sort_by: typing.Optional[AssetSort] = None,
         types: typing.Optional[typing.Sequence[AssetType]] = None,
+        audio_source: typing.Optional[AssetAudioSource] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> PaginatedAssetsResponse:
         """
@@ -59,7 +63,7 @@ class AssetsClient:
             Maximum number of assets to return (1-100).
 
         cursor : typing.Optional[str]
-            Cursor for pagination.
+            The nextCursor UUID returned by the previous page. A non-UUID value returns 400.
 
         search_query : typing.Optional[str]
             Search assets by name.
@@ -69,6 +73,9 @@ class AssetsClient:
 
         types : typing.Optional[typing.Sequence[AssetType]]
             Filter by asset types. Accepts multiple types as a comma-separated list (AUDIO, VIDEO, IMAGE).
+
+        audio_source : typing.Optional[AssetAudioSource]
+            Filter audio by source. Video and image assets are unaffected.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -97,7 +104,163 @@ class AssetsClient:
             search_query=search_query,
             sort_by=sort_by,
             types=types,
+            audio_source=audio_source,
             request_options=request_options,
+        )
+        return response.data
+
+    def count(
+        self,
+        *,
+        project_id: typing.Optional[str] = None,
+        user_id: typing.Optional[str] = None,
+        search_query: typing.Optional[str] = None,
+        types: typing.Optional[typing.Sequence[AssetType]] = None,
+        audio_source: typing.Optional[AssetAudioSource] = None,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> int:
+        """
+        Count the assets visible to your organization after applying the filters.
+
+        Parameters
+        ----------
+        project_id : typing.Optional[str]
+            Filter assets by project ID.
+
+        user_id : typing.Optional[str]
+            Filter assets by owning user ID.
+
+        search_query : typing.Optional[str]
+            Search assets by name.
+
+        types : typing.Optional[typing.Sequence[AssetType]]
+            Filter by asset types. Accepts a comma-separated list or repeated values.
+
+        audio_source : typing.Optional[AssetAudioSource]
+            Filter audio by source. Video and image assets are unaffected.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        int
+            Number of matching assets.
+
+        Examples
+        --------
+        from sync import Sync
+
+        client = Sync(
+            api_key="YOUR_API_KEY",
+        )
+        client.assets.count()
+        """
+        response = self._raw_client.count(
+            project_id=project_id,
+            user_id=user_id,
+            search_query=search_query,
+            types=types,
+            audio_source=audio_source,
+            request_options=request_options,
+        )
+        return response.data
+
+    def get_many(self, *, ids: AssetIds, request_options: typing.Optional[RequestOptions] = None) -> typing.List[Asset]:
+        """
+        Retrieve multiple assets by ID. Assets you cannot access are omitted from the response.
+
+        Parameters
+        ----------
+        ids : AssetIds
+            One asset ID, or a list of 1–100 asset IDs.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        typing.List[Asset]
+            Matching assets, in the service response order.
+
+        Examples
+        --------
+        from sync import Sync
+
+        client = Sync(
+            api_key="YOUR_API_KEY",
+        )
+        client.assets.get_many(
+            ids="ids",
+        )
+        """
+        response = self._raw_client.get_many(ids=ids, request_options=request_options)
+        return response.data
+
+    def get_download_url(self, id: AssetId, *, request_options: typing.Optional[RequestOptions] = None) -> str:
+        """
+        Get a URL for downloading an asset. The response body is a plain-text URL. Fetch that URL separately; do not send your API key to it.
+
+        Parameters
+        ----------
+        id : AssetId
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        str
+            Unquoted asset download URL in a text/plain body.
+
+        Examples
+        --------
+        from sync import Sync
+
+        client = Sync(
+            api_key="YOUR_API_KEY",
+        )
+        client.assets.get_download_url(
+            id="id",
+        )
+        """
+        response = self._raw_client.get_download_url(id, request_options=request_options)
+        return response.data
+
+    def find_uploaded(
+        self, *, content_sha256: str, type: AssetType, request_options: typing.Optional[RequestOptions] = None
+    ) -> FindUploadedAssetResponse:
+        """
+        Find the newest live asset registered with the same API key, SHA-256 digest, and type. Reuse its id instead of uploading the file again. Assets registered with another API key do not match, even within the same organization. Returns asset null when no asset matches.
+
+        Parameters
+        ----------
+        content_sha256 : str
+            SHA-256 digest of the file bytes as 64 lowercase hexadecimal characters.
+
+        type : AssetType
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        FindUploadedAssetResponse
+
+        Examples
+        --------
+        from sync import Sync
+
+        client = Sync(
+            api_key="YOUR_API_KEY",
+        )
+        client.assets.find_uploaded(
+            content_sha256="contentSha256",
+            type="AUDIO",
+        )
+        """
+        response = self._raw_client.find_uploaded(
+            content_sha256=content_sha256, type=type, request_options=request_options
         )
         return response.data
 
@@ -135,7 +298,7 @@ class AssetsClient:
         self, *, file_name: str, content_type: str, size: int, request_options: typing.Optional[RequestOptions] = None
     ) -> AssetUploadResponse:
         """
-        Request a presigned URL to upload a local file. PUT the file bytes to the returned uploadUrl with the same Content-Type, then register the file as an asset via POST /v2/assets using the returned url. Single uploads are capped at 5GB.
+        Request a presigned URL to upload a local file. PUT the file bytes to the returned uploadUrl with the same Content-Type, then register the file as an asset via POST /v2/assets using the returned url. Single uploads are capped at 5 GiB (5,368,709,120 bytes).
 
         Parameters
         ----------
@@ -146,7 +309,7 @@ class AssetsClient:
             The MIME content type of the file (e.g. video/mp4).
 
         size : int
-            The size of the file in bytes. Single uploads are capped at 5GB.
+            The size of the file in bytes. Single uploads are capped at 5 GiB (5,368,709,120 bytes).
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -189,6 +352,7 @@ class AssetsClient:
         duration_seconds: typing.Optional[float] = OMIT,
         width: typing.Optional[int] = OMIT,
         height: typing.Optional[int] = OMIT,
+        content_sha256: typing.Optional[str] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> Asset:
         """
@@ -196,10 +360,12 @@ class AssetsClient:
 
         projectId is optional. When provided it must reference a project in your organization — a stale or foreign id is rejected with a 422 and errorCode project_not_found; omit the field if you don't need the asset attached to a project.
 
+        A link to a single TikTok, Instagram, Facebook, or YouTube video is imported instead of registered. The response is 409 import_in_progress until the video is downloaded; send the same request again after Retry-After to get the imported VIDEO asset, named after the video. A failed import returns 422 import_failed; check the message or upload the file instead. A 429 means the concurrent or daily import limit was reached; follow Retry-After. Link imports return 403 import_not_enabled when unavailable for your account and 503 import_unavailable when temporarily unavailable. See [Asset Uploads](/docs/developer-guides/asset-uploads#import-a-social-video-link).
+
         Parameters
         ----------
         url : str
-            The public URL of the media to register — e.g. the url returned by POST /v2/assets/upload. Registration verifies the upload happened and enforces plan limits on the actual file size.
+            The public URL of the media to register — e.g. the url returned by POST /v2/assets/upload. Registration verifies the upload happened and enforces plan limits on the actual file size. A link to a single TikTok, Instagram, Facebook, or YouTube video is imported as a VIDEO asset instead.
 
         type : AssetType
             The type of asset.
@@ -233,6 +399,9 @@ class AssetsClient:
 
         height : typing.Optional[int]
             Height in pixels for video or image assets.
+
+        content_sha256 : typing.Optional[str]
+            SHA-256 digest of the file's bytes, as 64 lowercase hex characters.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -268,6 +437,7 @@ class AssetsClient:
             duration_seconds=duration_seconds,
             width=width,
             height=height,
+            content_sha256=content_sha256,
             request_options=request_options,
         )
         return response.data
@@ -401,6 +571,7 @@ class AsyncAssetsClient:
         search_query: typing.Optional[str] = None,
         sort_by: typing.Optional[AssetSort] = None,
         types: typing.Optional[typing.Sequence[AssetType]] = None,
+        audio_source: typing.Optional[AssetAudioSource] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> PaginatedAssetsResponse:
         """
@@ -415,7 +586,7 @@ class AsyncAssetsClient:
             Maximum number of assets to return (1-100).
 
         cursor : typing.Optional[str]
-            Cursor for pagination.
+            The nextCursor UUID returned by the previous page. A non-UUID value returns 400.
 
         search_query : typing.Optional[str]
             Search assets by name.
@@ -425,6 +596,9 @@ class AsyncAssetsClient:
 
         types : typing.Optional[typing.Sequence[AssetType]]
             Filter by asset types. Accepts multiple types as a comma-separated list (AUDIO, VIDEO, IMAGE).
+
+        audio_source : typing.Optional[AssetAudioSource]
+            Filter audio by source. Video and image assets are unaffected.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -461,7 +635,197 @@ class AsyncAssetsClient:
             search_query=search_query,
             sort_by=sort_by,
             types=types,
+            audio_source=audio_source,
             request_options=request_options,
+        )
+        return response.data
+
+    async def count(
+        self,
+        *,
+        project_id: typing.Optional[str] = None,
+        user_id: typing.Optional[str] = None,
+        search_query: typing.Optional[str] = None,
+        types: typing.Optional[typing.Sequence[AssetType]] = None,
+        audio_source: typing.Optional[AssetAudioSource] = None,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> int:
+        """
+        Count the assets visible to your organization after applying the filters.
+
+        Parameters
+        ----------
+        project_id : typing.Optional[str]
+            Filter assets by project ID.
+
+        user_id : typing.Optional[str]
+            Filter assets by owning user ID.
+
+        search_query : typing.Optional[str]
+            Search assets by name.
+
+        types : typing.Optional[typing.Sequence[AssetType]]
+            Filter by asset types. Accepts a comma-separated list or repeated values.
+
+        audio_source : typing.Optional[AssetAudioSource]
+            Filter audio by source. Video and image assets are unaffected.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        int
+            Number of matching assets.
+
+        Examples
+        --------
+        import asyncio
+
+        from sync import AsyncSync
+
+        client = AsyncSync(
+            api_key="YOUR_API_KEY",
+        )
+
+
+        async def main() -> None:
+            await client.assets.count()
+
+
+        asyncio.run(main())
+        """
+        response = await self._raw_client.count(
+            project_id=project_id,
+            user_id=user_id,
+            search_query=search_query,
+            types=types,
+            audio_source=audio_source,
+            request_options=request_options,
+        )
+        return response.data
+
+    async def get_many(
+        self, *, ids: AssetIds, request_options: typing.Optional[RequestOptions] = None
+    ) -> typing.List[Asset]:
+        """
+        Retrieve multiple assets by ID. Assets you cannot access are omitted from the response.
+
+        Parameters
+        ----------
+        ids : AssetIds
+            One asset ID, or a list of 1–100 asset IDs.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        typing.List[Asset]
+            Matching assets, in the service response order.
+
+        Examples
+        --------
+        import asyncio
+
+        from sync import AsyncSync
+
+        client = AsyncSync(
+            api_key="YOUR_API_KEY",
+        )
+
+
+        async def main() -> None:
+            await client.assets.get_many(
+                ids="ids",
+            )
+
+
+        asyncio.run(main())
+        """
+        response = await self._raw_client.get_many(ids=ids, request_options=request_options)
+        return response.data
+
+    async def get_download_url(self, id: AssetId, *, request_options: typing.Optional[RequestOptions] = None) -> str:
+        """
+        Get a URL for downloading an asset. The response body is a plain-text URL. Fetch that URL separately; do not send your API key to it.
+
+        Parameters
+        ----------
+        id : AssetId
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        str
+            Unquoted asset download URL in a text/plain body.
+
+        Examples
+        --------
+        import asyncio
+
+        from sync import AsyncSync
+
+        client = AsyncSync(
+            api_key="YOUR_API_KEY",
+        )
+
+
+        async def main() -> None:
+            await client.assets.get_download_url(
+                id="id",
+            )
+
+
+        asyncio.run(main())
+        """
+        response = await self._raw_client.get_download_url(id, request_options=request_options)
+        return response.data
+
+    async def find_uploaded(
+        self, *, content_sha256: str, type: AssetType, request_options: typing.Optional[RequestOptions] = None
+    ) -> FindUploadedAssetResponse:
+        """
+        Find the newest live asset registered with the same API key, SHA-256 digest, and type. Reuse its id instead of uploading the file again. Assets registered with another API key do not match, even within the same organization. Returns asset null when no asset matches.
+
+        Parameters
+        ----------
+        content_sha256 : str
+            SHA-256 digest of the file bytes as 64 lowercase hexadecimal characters.
+
+        type : AssetType
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        FindUploadedAssetResponse
+
+        Examples
+        --------
+        import asyncio
+
+        from sync import AsyncSync
+
+        client = AsyncSync(
+            api_key="YOUR_API_KEY",
+        )
+
+
+        async def main() -> None:
+            await client.assets.find_uploaded(
+                content_sha256="contentSha256",
+                type="AUDIO",
+            )
+
+
+        asyncio.run(main())
+        """
+        response = await self._raw_client.find_uploaded(
+            content_sha256=content_sha256, type=type, request_options=request_options
         )
         return response.data
 
@@ -507,7 +871,7 @@ class AsyncAssetsClient:
         self, *, file_name: str, content_type: str, size: int, request_options: typing.Optional[RequestOptions] = None
     ) -> AssetUploadResponse:
         """
-        Request a presigned URL to upload a local file. PUT the file bytes to the returned uploadUrl with the same Content-Type, then register the file as an asset via POST /v2/assets using the returned url. Single uploads are capped at 5GB.
+        Request a presigned URL to upload a local file. PUT the file bytes to the returned uploadUrl with the same Content-Type, then register the file as an asset via POST /v2/assets using the returned url. Single uploads are capped at 5 GiB (5,368,709,120 bytes).
 
         Parameters
         ----------
@@ -518,7 +882,7 @@ class AsyncAssetsClient:
             The MIME content type of the file (e.g. video/mp4).
 
         size : int
-            The size of the file in bytes. Single uploads are capped at 5GB.
+            The size of the file in bytes. Single uploads are capped at 5 GiB (5,368,709,120 bytes).
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -569,6 +933,7 @@ class AsyncAssetsClient:
         duration_seconds: typing.Optional[float] = OMIT,
         width: typing.Optional[int] = OMIT,
         height: typing.Optional[int] = OMIT,
+        content_sha256: typing.Optional[str] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> Asset:
         """
@@ -576,10 +941,12 @@ class AsyncAssetsClient:
 
         projectId is optional. When provided it must reference a project in your organization — a stale or foreign id is rejected with a 422 and errorCode project_not_found; omit the field if you don't need the asset attached to a project.
 
+        A link to a single TikTok, Instagram, Facebook, or YouTube video is imported instead of registered. The response is 409 import_in_progress until the video is downloaded; send the same request again after Retry-After to get the imported VIDEO asset, named after the video. A failed import returns 422 import_failed; check the message or upload the file instead. A 429 means the concurrent or daily import limit was reached; follow Retry-After. Link imports return 403 import_not_enabled when unavailable for your account and 503 import_unavailable when temporarily unavailable. See [Asset Uploads](/docs/developer-guides/asset-uploads#import-a-social-video-link).
+
         Parameters
         ----------
         url : str
-            The public URL of the media to register — e.g. the url returned by POST /v2/assets/upload. Registration verifies the upload happened and enforces plan limits on the actual file size.
+            The public URL of the media to register — e.g. the url returned by POST /v2/assets/upload. Registration verifies the upload happened and enforces plan limits on the actual file size. A link to a single TikTok, Instagram, Facebook, or YouTube video is imported as a VIDEO asset instead.
 
         type : AssetType
             The type of asset.
@@ -613,6 +980,9 @@ class AsyncAssetsClient:
 
         height : typing.Optional[int]
             Height in pixels for video or image assets.
+
+        content_sha256 : typing.Optional[str]
+            SHA-256 digest of the file's bytes, as 64 lowercase hex characters.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -656,6 +1026,7 @@ class AsyncAssetsClient:
             duration_seconds=duration_seconds,
             width=width,
             height=height,
+            content_sha256=content_sha256,
             request_options=request_options,
         )
         return response.data

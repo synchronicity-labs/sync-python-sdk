@@ -46,6 +46,13 @@ class GenerationError(UncheckedBaseModel):
     Link to the documentation page for the failing operation.
     """
 
+    billing_url: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="billingUrl")] = pydantic.Field(
+        default=None
+    )
+    """
+    Billing page for resolving a payment, plan, or allowance issue, when applicable.
+    """
+
     request_id: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="requestId")] = pydantic.Field(
         default=None
     )
@@ -65,6 +72,13 @@ class GenerationError(UncheckedBaseModel):
     ] = pydantic.Field(default=None)
     """
     For dialogue_edit_removal_too_large: the section to change, when it can be identified. Create a new dialogue edit preview before submitting again.
+    """
+
+    voice_id: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="voiceId")] = pydantic.Field(
+        default=None
+    )
+    """
+    For voice_clone_pending, the pending clone ID. Poll GET /v2/voices/{voiceId} instead of submitting another clone.
     """
 
     line_number: typing_extensions.Annotated[typing.Optional[int], FieldMetadata(alias="lineNumber")] = pydantic.Field(

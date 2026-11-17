@@ -5,6 +5,7 @@ from .raw_client import RawAccountClient
 import typing
 from ..core.request_options import RequestOptions
 from .types.account_overview import AccountOverview
+from .types.account_organizations import AccountOrganizations
 from ..core.client_wrapper import AsyncClientWrapper
 from .raw_client import AsyncRawAccountClient
 
@@ -24,12 +25,17 @@ class AccountClient:
         """
         return self._raw_client
 
-    def get(self, *, request_options: typing.Optional[RequestOptions] = None) -> AccountOverview:
+    def get(
+        self, *, organization_id: typing.Optional[str] = None, request_options: typing.Optional[RequestOptions] = None
+    ) -> AccountOverview:
         """
         Get the account, plan, limits and balance behind these credentials. Call it before submitting work to check plan limits and remaining credits or free allowance, and after a 402, 403 or 429 to decide how to recover: `billingModel` says whether to top up credits (`credits`), pay or update the payment method (`usage`), upgrade (`free`) or contact sync. (`enterprise`). Send people to `billingUrl` for anything that needs a payment.
 
         Parameters
         ----------
+        organization_id : typing.Optional[str]
+            Organization ID from List Organizations. Omit to use the credential's default organization.
+
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
 
@@ -47,7 +53,37 @@ class AccountClient:
         )
         client.account.get()
         """
-        response = self._raw_client.get(request_options=request_options)
+        response = self._raw_client.get(organization_id=organization_id, request_options=request_options)
+        return response.data
+
+    def list_organizations(
+        self, *, organization_id: typing.Optional[str] = None, request_options: typing.Optional[RequestOptions] = None
+    ) -> AccountOrganizations:
+        """
+        List the organizations these credentials can access, current one first. An API key lists only its own organization. An OAuth connection lists the organizations selected when it was connected. Send an ID as x-sync-organization-id on subsequent requests to select that organization. An inaccessible organization returns 403; an invalid ID returns 400.
+
+        Parameters
+        ----------
+        organization_id : typing.Optional[str]
+            Organization ID from this list. Omit to use the credential's default organization.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        AccountOrganizations
+
+        Examples
+        --------
+        from sync import Sync
+
+        client = Sync(
+            api_key="YOUR_API_KEY",
+        )
+        client.account.list_organizations()
+        """
+        response = self._raw_client.list_organizations(organization_id=organization_id, request_options=request_options)
         return response.data
 
 
@@ -66,12 +102,17 @@ class AsyncAccountClient:
         """
         return self._raw_client
 
-    async def get(self, *, request_options: typing.Optional[RequestOptions] = None) -> AccountOverview:
+    async def get(
+        self, *, organization_id: typing.Optional[str] = None, request_options: typing.Optional[RequestOptions] = None
+    ) -> AccountOverview:
         """
         Get the account, plan, limits and balance behind these credentials. Call it before submitting work to check plan limits and remaining credits or free allowance, and after a 402, 403 or 429 to decide how to recover: `billingModel` says whether to top up credits (`credits`), pay or update the payment method (`usage`), upgrade (`free`) or contact sync. (`enterprise`). Send people to `billingUrl` for anything that needs a payment.
 
         Parameters
         ----------
+        organization_id : typing.Optional[str]
+            Organization ID from List Organizations. Omit to use the credential's default organization.
+
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
 
@@ -97,5 +138,45 @@ class AsyncAccountClient:
 
         asyncio.run(main())
         """
-        response = await self._raw_client.get(request_options=request_options)
+        response = await self._raw_client.get(organization_id=organization_id, request_options=request_options)
+        return response.data
+
+    async def list_organizations(
+        self, *, organization_id: typing.Optional[str] = None, request_options: typing.Optional[RequestOptions] = None
+    ) -> AccountOrganizations:
+        """
+        List the organizations these credentials can access, current one first. An API key lists only its own organization. An OAuth connection lists the organizations selected when it was connected. Send an ID as x-sync-organization-id on subsequent requests to select that organization. An inaccessible organization returns 403; an invalid ID returns 400.
+
+        Parameters
+        ----------
+        organization_id : typing.Optional[str]
+            Organization ID from this list. Omit to use the credential's default organization.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        AccountOrganizations
+
+        Examples
+        --------
+        import asyncio
+
+        from sync import AsyncSync
+
+        client = AsyncSync(
+            api_key="YOUR_API_KEY",
+        )
+
+
+        async def main() -> None:
+            await client.account.list_organizations()
+
+
+        asyncio.run(main())
+        """
+        response = await self._raw_client.list_organizations(
+            organization_id=organization_id, request_options=request_options
+        )
         return response.data

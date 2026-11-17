@@ -1,6 +1,6 @@
 # Reference
 ## Account
-<details><summary><code>client.account.<a href="src/sync/account/client.py">get</a>()</code></summary>
+<details><summary><code>client.account.<a href="src/sync/account/client.py">get</a>(...)</code></summary>
 <dl>
 <dd>
 
@@ -44,6 +44,82 @@ client.account.get()
 
 <dl>
 <dd>
+
+<dl>
+<dd>
+
+**organization_id:** `typing.Optional[str]` — Organization ID from List Organizations. Omit to use the credential's default organization.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
+<details><summary><code>client.account.<a href="src/sync/account/client.py">list_organizations</a>(...)</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+List the organizations these credentials can access, current one first. An API key lists only its own organization. An OAuth connection lists the organizations selected when it was connected. Send an ID as x-sync-organization-id on subsequent requests to select that organization. An inaccessible organization returns 403; an invalid ID returns 400.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+from sync import Sync
+
+client = Sync(
+    api_key="YOUR_API_KEY",
+)
+client.account.list_organizations()
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**organization_id:** `typing.Optional[str]` — Organization ID from this list. Omit to use the credential's default organization.
+    
+</dd>
+</dl>
 
 <dl>
 <dd>
@@ -128,7 +204,7 @@ client.assets.list(
 <dl>
 <dd>
 
-**cursor:** `typing.Optional[str]` — Cursor for pagination.
+**cursor:** `typing.Optional[str]` — The nextCursor UUID returned by the previous page. A non-UUID value returns 400.
     
 </dd>
 </dl>
@@ -153,6 +229,333 @@ client.assets.list(
 <dd>
 
 **types:** `typing.Optional[typing.Sequence[AssetType]]` — Filter by asset types. Accepts multiple types as a comma-separated list (AUDIO, VIDEO, IMAGE).
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**audio_source:** `typing.Optional[AssetAudioSource]` — Filter audio by source. Video and image assets are unaffected.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
+<details><summary><code>client.assets.<a href="src/sync/assets/client.py">count</a>(...)</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Count the assets visible to your organization after applying the filters.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+from sync import Sync
+
+client = Sync(
+    api_key="YOUR_API_KEY",
+)
+client.assets.count()
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**project_id:** `typing.Optional[str]` — Filter assets by project ID.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**user_id:** `typing.Optional[str]` — Filter assets by owning user ID.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**search_query:** `typing.Optional[str]` — Search assets by name.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**types:** `typing.Optional[typing.Sequence[AssetType]]` — Filter by asset types. Accepts a comma-separated list or repeated values.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**audio_source:** `typing.Optional[AssetAudioSource]` — Filter audio by source. Video and image assets are unaffected.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
+<details><summary><code>client.assets.<a href="src/sync/assets/client.py">get_many</a>(...)</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Retrieve multiple assets by ID. Assets you cannot access are omitted from the response.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+from sync import Sync
+
+client = Sync(
+    api_key="YOUR_API_KEY",
+)
+client.assets.get_many(
+    ids="ids",
+)
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**ids:** `AssetIds` — One asset ID, or a list of 1–100 asset IDs.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
+<details><summary><code>client.assets.<a href="src/sync/assets/client.py">get_download_url</a>(...)</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Get a URL for downloading an asset. The response body is a plain-text URL. Fetch that URL separately; do not send your API key to it.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+from sync import Sync
+
+client = Sync(
+    api_key="YOUR_API_KEY",
+)
+client.assets.get_download_url(
+    id="id",
+)
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**id:** `AssetId` 
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
+<details><summary><code>client.assets.<a href="src/sync/assets/client.py">find_uploaded</a>(...)</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Find the newest live asset registered with the same API key, SHA-256 digest, and type. Reuse its id instead of uploading the file again. Assets registered with another API key do not match, even within the same organization. Returns asset null when no asset matches.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+from sync import Sync
+
+client = Sync(
+    api_key="YOUR_API_KEY",
+)
+client.assets.find_uploaded(
+    content_sha256="contentSha256",
+    type="AUDIO",
+)
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**content_sha256:** `str` — SHA-256 digest of the file bytes as 64 lowercase hexadecimal characters.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**type:** `AssetType` 
     
 </dd>
 </dl>
@@ -254,7 +657,7 @@ client.assets.get(
 <dl>
 <dd>
 
-Request a presigned URL to upload a local file. PUT the file bytes to the returned uploadUrl with the same Content-Type, then register the file as an asset via POST /v2/assets using the returned url. Single uploads are capped at 5GB.
+Request a presigned URL to upload a local file. PUT the file bytes to the returned uploadUrl with the same Content-Type, then register the file as an asset via POST /v2/assets using the returned url. Single uploads are capped at 5 GiB (5,368,709,120 bytes).
 </dd>
 </dl>
 </dd>
@@ -310,7 +713,7 @@ client.assets.create_upload(
 <dl>
 <dd>
 
-**size:** `int` — The size of the file in bytes. Single uploads are capped at 5GB.
+**size:** `int` — The size of the file in bytes. Single uploads are capped at 5 GiB (5,368,709,120 bytes).
     
 </dd>
 </dl>
@@ -345,6 +748,8 @@ client.assets.create_upload(
 Register a media URL as a reusable asset and get back its id. Use the id in generation inputs (input[].assetId) or as a voice clone sample. To upload a local file, first request a presigned URL via POST /v2/assets/upload, PUT the file there, then register the returned url here. Registration verifies the upload happened and enforces plan limits on the actual file size.
 
 projectId is optional. When provided it must reference a project in your organization — a stale or foreign id is rejected with a 422 and errorCode project_not_found; omit the field if you don't need the asset attached to a project.
+
+A link to a single TikTok, Instagram, Facebook, or YouTube video is imported instead of registered. The response is 409 import_in_progress until the video is downloaded; send the same request again after Retry-After to get the imported VIDEO asset, named after the video. A failed import returns 422 import_failed; check the message or upload the file instead. A 429 means the concurrent or daily import limit was reached; follow Retry-After. Link imports return 403 import_not_enabled when unavailable for your account and 503 import_unavailable when temporarily unavailable. See [Asset Uploads](/docs/developer-guides/asset-uploads#import-a-social-video-link).
 </dd>
 </dl>
 </dd>
@@ -384,7 +789,7 @@ client.assets.create(
 <dl>
 <dd>
 
-**url:** `str` — The public URL of the media to register — e.g. the url returned by POST /v2/assets/upload. Registration verifies the upload happened and enforces plan limits on the actual file size.
+**url:** `str` — The public URL of the media to register — e.g. the url returned by POST /v2/assets/upload. Registration verifies the upload happened and enforces plan limits on the actual file size. A link to a single TikTok, Instagram, Facebook, or YouTube video is imported as a VIDEO asset instead.
     
 </dd>
 </dl>
@@ -473,6 +878,14 @@ client.assets.create(
 <dd>
 
 **height:** `typing.Optional[int]` — Height in pixels for video or image assets.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**content_sha256:** `typing.Optional[str]` — SHA-256 digest of the file's bytes, as 64 lowercase hex characters.
     
 </dd>
 </dl>
@@ -689,6 +1102,182 @@ client.assets.delete(
 </dl>
 </details>
 
+## AudioTrims
+<details><summary><code>client.audio_trims.<a href="src/sync/audio_trims/client.py">create</a>(...)</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Prepare a new audio asset from the first durationSeconds of an audio file. Provide exactly one source: assetId or a sourceUrl for audio hosted in Sync storage that you can access. Returns 202 with the trim. Poll GET /v2/audio-trims/{id} until status is completed or failed. Use the completed assetId as an audio input to a generation.
+A source you cannot access returns 404. Unsupported sources can return 422 audio_trim_source_not_hosted or audio_trim_source_not_allowed. Each organization can have 4 trims in progress and start 60 per hour; requests beyond these limits return 429 audio_trim_rate_limited.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+from sync import Sync
+
+client = Sync(
+    api_key="YOUR_API_KEY",
+)
+client.audio_trims.create(
+    idempotency_key="trim-intro-20s",
+    asset_id="3f2b8c1e-5d4a-4e9b-8c7d-1a2b3c4d5e6f",
+    duration_seconds=20.0,
+)
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**idempotency_key:** `str` — Required. 1–128 characters matching [A-Za-z0-9._~-]+, scoped to your organization and the calling user or API key. Retrying with the same key and body returns the original trim; reusing the key with a different body returns 409.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**duration_seconds:** `float` — Length of the audio to keep from the start, in seconds (0.01–3600).
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**asset_id:** `typing.Optional[str]` — ID of a saved audio asset you can access.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**source_url:** `typing.Optional[str]` — URL of audio stored in sync. storage for your organization.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**project_id:** `typing.Optional[str]` — Project to add the trimmed audio asset to.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
+<details><summary><code>client.audio_trims.<a href="src/sync/audio_trims/client.py">get</a>(...)</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Retrieve an audio trim created by the same user or API key. While status is queued or processing, wait retryAfterMs before polling again. When status is completed, assetId is the trimmed WAV audio asset and durationSeconds is its measured length. A failed trim has errorCode audio_trim_failed; start a new trim with a new Idempotency-Key.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+from sync import Sync
+
+client = Sync(
+    api_key="YOUR_API_KEY",
+)
+client.audio_trims.get(
+    id="6533643b-aceb-4c40-967e-d9ba9baac39e",
+)
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**id:** `str` — The trim id returned by POST /v2/audio-trims.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
 ## Batch
 <details><summary><code>client.batch.<a href="src/sync/batch/client.py">create</a>(...)</code></summary>
 <dl>
@@ -702,7 +1291,7 @@ client.assets.delete(
 <dl>
 <dd>
 
-Create a batch processing job from a JSONL file. Requires a paid plan; free accounts get 402 `plan_feature_unavailable`. Send the file in multipart field `input` (or the accepted `file` alias); it must be 5 MB or smaller. On Scale and above a batch holds 20-500 records by default and is queued, holding one concurrency slot. Below Scale every record runs as a generation right away, so a batch holds 1 record up to your plan's concurrency limit: more records than that returns 400, and more records than your currently free generation slots returns 429 `concurrency_limit_reached`. Credit-billed plans reserve credits for the whole batch at submit and get 402 `insufficient_credits` when the balance is short. Each line must contain `request_id`, endpoint exactly `/v2/generate`, and a generation `payload`. To send the records as a JSON array instead of a file, use "Create Batch from Rows", the `application/json` form of the same endpoint. Errors name a refused record by its 1-based line, counting non-empty lines: dialogue edit refusals return it as `lineNumber`, other record errors only in `message`.
+Create a batch processing job from a JSONL file. Requires the Scale plan or above and approval for your organization. Access is disabled by default, including for new Scale subscriptions. Contact support@sync.so to request access. Without approval, creation and dry runs return 403 `batch_access_not_enabled`. Approved organizations on other plans get 402 `plan_feature_unavailable` with `requiredPlan`. Send the file in multipart field `input` (or the accepted `file` alias); it must be 5 MB or smaller and contain 20-500 records by default. A batch is queued and holds one slot of your plan's batch concurrency limit; more active batches than that returns 429 `concurrency_limit_reached`. Each line must contain `request_id`, endpoint exactly `/v2/generate`, and a generation `payload`. To send the records as a JSON array instead of a file, use "Create Batch from Rows", the `application/json` form of the same endpoint. Errors name a refused record by its 1-based line, counting non-empty lines: dialogue edit refusals return it as `lineNumber`, other record errors only in `message`.
 </dd>
 </dl>
 </dd>
@@ -750,7 +1339,7 @@ core.File` — See core.File for more documentation
 <dl>
 <dd>
 
-**webhook_url:** `typing.Optional[str]` — Optional webhook URL to receive batch completion notifications. A POST request will be sent when the batch completes or fails, with a Sync-Signature header (`t=<unix>,v1=<hmac_sha256>`) signed with the organization webhook secret and a stable Sync-Delivery-Id header. Delivery is attempted up to six times over about two hours.
+**webhook_url:** `typing.Optional[str]` — Optional webhook URL to receive batch completion notifications. A POST request will be sent when the batch completes or fails, with a Sync-Signature header (`t=<unix>,v1=<hmac_sha256>`) signed with the organization webhook secret and a stable Sync-Delivery-Id header. Delivery is attempted up to six times over about two hours. A non-empty URL must use http:// or https://; invalid URLs return 400 before creating a batch.
     
 </dd>
 </dl>
@@ -758,7 +1347,7 @@ core.File` — See core.File for more documentation
 <dl>
 <dd>
 
-**dry_run:** `typing.Optional[bool]` — When true, validates the JSONL file and returns `{ "status": "VALIDATED" }` without creating a batch.
+**dry_run:** `typing.Optional[bool]` — When true, validates the JSONL file and returns `{ "status": "VALIDATED" }` without creating a batch. Requires the same organization approval and plan as batch creation.
     
 </dd>
 </dl>
@@ -790,7 +1379,7 @@ core.File` — See core.File for more documentation
 <dl>
 <dd>
 
-The `application/json` form of `POST /v2/batch`, the same endpoint as "Create Batch": send the records in a `rows` array instead of a JSONL file. Each row is the same object as one JSONL line and is validated the same way: 20-500 rows by default on Scale and above, 1 row up to your free generation slots below Scale, 5 MB or smaller when serialized as JSONL, unique `request_id` values, and endpoint exactly `/v2/generate`. Errors name a refused row by its line, where line N is `rows[N-1]`: dialogue edit refusals return it as `lineNumber`, other record errors only in `message`. Requires a paid plan. In early access, enabled per organization, a row's payload can carry `dialogueEdit` to render a completed preview from POST /v2/dialogue-edits: send one video input, the video the preview was made from, and no audio input. All dialogue edit rows in a batch must come from the same source video. Each row is expanded at submit into the request POST /v2/generate builds for that preview and is charged the same. A dialogue edit row that cannot be rendered refuses the whole batch with the `/v2/generate` errorCode (for example dialogue_edit_not_found, 422) and `lineNumber`. See [Batch Processing](/api-reference/guides/batch-processing).
+The `application/json` form of `POST /v2/batch`, the same endpoint as "Create Batch": send the records in a `rows` array instead of a JSONL file. Each row is the same object as one JSONL line and is validated the same way: 20-500 rows by default, 5 MB or smaller when serialized as JSONL, unique `request_id` values, and endpoint exactly `/v2/generate`. Errors name a refused row by its line, where line N is `rows[N-1]`: dialogue edit refusals return it as `lineNumber`, other record errors only in `message`. Requires the Scale plan or above and approval for your organization. Access is disabled by default; contact support@sync.so to request access. Without approval, creation and dry runs return 403 `batch_access_not_enabled`. In early access, enabled per organization, a row's payload can carry `dialogueEdit` to render a completed preview from POST /v2/dialogue-edits: send one video input, the video the preview was made from, and no audio input. All dialogue edit rows in a batch must come from the same source video. Each row is expanded at submit into the request POST /v2/generate builds for that preview and is charged the same. The expanded batch must also be 5 MB or smaller. A dialogue edit row that cannot be rendered refuses the whole batch with the `/v2/generate` errorCode (for example dialogue_edit_not_found, 422) and `lineNumber`. See [Batch Processing](/docs/api-reference/guides/batch-processing).
 </dd>
 </dl>
 </dd>
@@ -1116,7 +1705,7 @@ client.batch.create_from_rows(
 <dl>
 <dd>
 
-**rows:** `typing.Sequence[BatchRow]` — The batch records: 20-500 by default on Scale and above, 1 up to your free generation slots below Scale. Each row contains `request_id`, endpoint exactly `/v2/generate`, and a generation `payload`, as on a JSONL line.
+**rows:** `typing.Sequence[BatchRow]` — The batch records, 20-500 by default. Each row contains `request_id`, endpoint exactly `/v2/generate`, and a generation `payload`, as on a JSONL line.
     
 </dd>
 </dl>
@@ -1124,7 +1713,7 @@ client.batch.create_from_rows(
 <dl>
 <dd>
 
-**webhook_url:** `typing.Optional[str]` — Optional webhook URL to receive batch completion notifications. A POST request will be sent when the batch completes or fails, with a Sync-Signature header (`t=<unix>,v1=<hmac_sha256>`) signed with the organization webhook secret and a stable Sync-Delivery-Id header. Delivery is attempted up to six times over about two hours.
+**webhook_url:** `typing.Optional[str]` — Optional webhook URL to receive batch completion notifications. A POST request will be sent when the batch completes or fails, with a Sync-Signature header (`t=<unix>,v1=<hmac_sha256>`) signed with the organization webhook secret and a stable Sync-Delivery-Id header. Delivery is attempted up to six times over about two hours. A non-empty URL must use http:// or https://; invalid URLs return 400 before creating a batch.
     
 </dd>
 </dl>
@@ -1132,7 +1721,7 @@ client.batch.create_from_rows(
 <dl>
 <dd>
 
-**dry_run:** `typing.Optional[bool]` — When true, validates the rows, including dialogue edit expansion, and returns `{ "status": "VALIDATED" }` without creating a batch.
+**dry_run:** `typing.Optional[bool]` — When true, validates the rows, including dialogue edit expansion, and returns `{ "status": "VALIDATED" }` without creating a batch. Requires the same organization approval and plan as batch creation.
     
 </dd>
 </dl>
@@ -1319,7 +1908,8 @@ client.batch.list()
 <dl>
 <dd>
 
-Applies word-level edits to a transcript from `POST /v2/transcriptions` and synthesizes preview audio for the same window: only the edited spans are re-spoken in a voice cloned from the source, everything else stays the original recording. Poll `GET /v2/dialogue-edits/{id}` until `status` is `COMPLETED`, `COMPLETED_PARTIAL` or `FAILED`; a completed or partially completed job carries `previewAudioUrl`, the retimed `resultTranscript` and the edited regions as `resultSlots`. Edits that cannot be applied to the transcript are refused with a 400 before a job exists. An API-key request is admitted only for the whole video (leave startMs and endMs unset) and only when the organization's rollout enables segment lipsync and section expansion: a partial window is refused with errorCode `dialogue_edit_unsupported` (422), a rollout without both flags with `dialogue_edit_retime_required` (422), and a rollout that cannot be evaluated with `generation_infra_service_unavailable` (503; retry with backoff). Studio sessions may select a window. Normal billing, planning, duration and rate limits still apply.
+Applies word-level edits to a transcript from `POST /v2/transcriptions` and synthesizes preview audio for the same window: only the edited spans are re-spoken in a voice cloned from the source, everything else stays the original recording. Poll `GET /v2/dialogue-edits/{id}` until `status` is `COMPLETED`, `COMPLETED_PARTIAL` or `FAILED`; a completed or partially completed job carries `previewAudioUrl`, the retimed `resultTranscript` and the edited regions as `resultSlots`. Edits that cannot be applied return 400 PLAN_FAILED. Requests with more than 100 edits return 400 dialogue_edit_too_many_edits. API-key requests must cover the whole video: omit startMs and endMs. A partial window returns 422 dialogue_edit_unsupported. A source longer than the 10-minute dialogue limit returns 422 SOURCE_TOO_LONG.
+Send Idempotency-Key on the first request and reuse it with the same body on retries. A replay returns 200 with the original job's current state and Idempotency-Replayed: true. Reusing a key with different inputs returns 409 IDEMPOTENCY_KEY_CONFLICT. A malformed key returns 400 INVALID_IDEMPOTENCY_KEY. If the job cannot be queued, retry the 503 with the same key and body. Honor Retry-After when present.
 </dd>
 </dl>
 </dd>
@@ -1405,7 +1995,7 @@ client.dialogue_edits.create(
 <dl>
 <dd>
 
-**edits:** `typing.Sequence[DialogueEditOperation]` — The edits to apply: change replaces one word (wordId, replacement), remove cuts a contiguous run of words (wordIds). Between 1 and 100 edits per job.
+**edits:** `typing.Sequence[DialogueEditOperation]` — The edits to apply: change replaces one word (wordId, replacement, and an optional pronunciation), remove cuts a contiguous run of words (wordIds). Between 1 and 100 edits per job. More than 100 returns 400 with errorCode dialogue_edit_too_many_edits.
     
 </dd>
 </dl>
@@ -1421,6 +2011,14 @@ client.dialogue_edits.create(
 <dl>
 <dd>
 
+**idempotency_key:** `typing.Optional[str]` — Case-sensitive organization-scoped key. Send one header with 1–128 characters from [A-Za-z0-9._~-]+. Reuse the same key and body for retries; use a new key for a new or revised edit.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
 **start_ms:** `typing.Optional[int]` — Start of the edited window, in milliseconds from the start of the source. Use the same window the transcript was made for. Defaults to 0. An API-key request must leave startMs and endMs unset; the edit then covers the whole video.
     
 </dd>
@@ -1429,7 +2027,7 @@ client.dialogue_edits.create(
 <dl>
 <dd>
 
-**end_ms:** `typing.Optional[int]` — End of the edited window, in milliseconds from the start of the source. Omit to run to the end. The window cannot exceed 10 minutes. An API-key request must leave startMs and endMs unset to edit the whole video.
+**end_ms:** `typing.Optional[int]` — End of the edited window, in milliseconds from the start of the source. Omit to run to the end. The window cannot exceed 10 minutes. An API-key request must leave startMs and endMs unset to edit the whole video. With endMs omitted, a transcript that runs more than 10 minutes past startMs returns 422 with errorCode `SOURCE_TOO_LONG`.
     
 </dd>
 </dl>
@@ -1564,7 +2162,7 @@ client.dialogue_edits.get(
 <dl>
 <dd>
 
-Returns the full catalog of machine-readable error codes — each with a human-readable message and a suggested fix. It covers generation failures plus the coded errors returned by the assets, voices, and TTS endpoints (e.g. project_not_found, voice_not_found, asset_forbidden). This endpoint is unauthenticated. Pair it with the errorCode field returned on a failed generation or on a coded 4xx/5xx response so an agent can look up what went wrong and how to correct it without hard-coding error strings.
+Returns the full catalog of machine-readable error codes — each with a human-readable message and a suggested fix. It covers generation failures plus the coded errors returned by the assets, voices, and TTS endpoints (e.g. project_not_found, voice_not_found, asset_forbidden) and by TikTok, Instagram, Facebook, and YouTube link imports (e.g. import_in_progress, import_failed). This endpoint is unauthenticated. Pair it with the errorCode field returned on a failed generation or on a coded 4xx/5xx response so an agent can look up what went wrong and how to correct it without hard-coding error strings.
 </dd>
 </dl>
 </dd>
@@ -1765,6 +2363,278 @@ client.feedback.submit(
 </details>
 
 ## Generations
+<details><summary><code>client.generations.<a href="src/sync/generations/client.py">count</a>(...)</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Count generations visible to your credentials. All provided filters are combined.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+from sync import Sync
+
+client = Sync(
+    api_key="YOUR_API_KEY",
+)
+client.generations.count()
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**status:** `typing.Optional[typing.Sequence[GenerationStatus]]` — Filter by status, as a comma-separated list or repeated values.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**type:** `typing.Optional[GenerationCountType]` — Filter by Studio (playground) or API generations.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**source:** `typing.Optional[typing.Sequence[str]]` — Filter by source label, as a comma-separated list or repeated values.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**generation_source:** `typing.Optional[GenerationSource]` — Filter by product surface. Older generations without a recorded surface are excluded when this filter is set.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**current_user_only:** `typing.Optional[bool]` — Count only generations owned by the current user. Defaults to false.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
+<details><summary><code>client.generations.<a href="src/sync/generations/client.py">get_costs</a>(...)</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Read the recorded costs for a generation. Credit amounts are USD face value, not cash paid. Metered amounts exclude invoice adjustments and tax. A null total means one or more components are pending or unavailable. This endpoint does not estimate prices or change billing.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+from sync import Sync
+
+client = Sync(
+    api_key="YOUR_API_KEY",
+)
+client.generations.get_costs(
+    id="id",
+)
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**id:** `GenerationId` 
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
+<details><summary><code>client.generations.<a href="src/sync/generations/client.py">list_costs</a>(...)</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+List the recorded costs of every generation that finished in a time range, for loading usage and spend in bulk. Each item is the same cost object as Get Generation Costs, plus `createdAt`, `finishedAt`, `model` and `apiKey`. The range filters on `finishedAt`, with `startTime` inclusive and `endTime` exclusive, and items are ordered oldest first, so back-to-back ranges such as one per UTC day neither overlap nor skip. Page with `cursor` until `nextCursor` is null, keeping the same `startTime` and `endTime`; changing the range between pages can skip items. Costs are normally recorded within about 10 minutes of completion. A null total means one or more components are pending or unavailable; `availability` is `pending`, `partial` or `unavailable`, and `partial` or `unavailable` items may not change. If recorded usage can't be read, the whole page fails with 503 `usage_dependency_unavailable` and no partial page is returned; retry the same request. See [Export usage and costs](/docs/api-reference/guides/usage-export).
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+import datetime
+
+from sync import Sync
+
+client = Sync(
+    api_key="YOUR_API_KEY",
+)
+client.generations.list_costs(
+    start_time=datetime.datetime.fromisoformat(
+        "2026-11-12 00:00:00+00:00",
+    ),
+    end_time=datetime.datetime.fromisoformat(
+        "2026-11-13 00:00:00+00:00",
+    ),
+    limit=500,
+)
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**start_time:** `dt.datetime` — Start of the range, inclusive. UTC ISO 8601 date-time, such as 2026-11-12T00:00:00Z.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**end_time:** `dt.datetime` — End of the range, exclusive. UTC ISO 8601 date-time. Must be after startTime.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**limit:** `typing.Optional[int]` — Items per page, 1 to 500. Defaults to 100.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**cursor:** `typing.Optional[str]` — The nextCursor from the previous page. Send it with the same startTime and endTime.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
 <details><summary><code>client.generations.<a href="src/sync/generations/client.py">create</a>(...)</code></summary>
 <dl>
 <dd>
@@ -1777,7 +2647,7 @@ client.feedback.submit(
 <dl>
 <dd>
 
-Create a lip sync generation with `application/json` — provide each input by `url` or by `assetId` from an uploaded asset. For reusable or large local files, upload them first with POST /v2/assets/upload and pass the returned `assetId`; see [Asset Uploads](/developer-guides/asset-uploads). Use the multipart "Create Generation with Files" form only when uploading direct audio, video, or image file fields; it has a 5 GiB per-file application parser limit, subject to your plan and any lower proxy limits. Nested fields such as input, options, segments, outputAudio, dubParams, and dialogueEdit must be JSON strings in multipart requests. If a `text` input requires speech synthesis and the ElevenLabs provider is temporarily unavailable, the request returns errorCode elevenlabs_service_unavailable: 504 for provider timeouts and 503 for other provider outages for unkeyed requests. Keyed uncertain outcomes return 503 IDEMPOTENCY_OUTCOME_UNKNOWN instead. An API-key request that passes dialogueEdit is refused with errorCode dialogue_edit_retime_required (422) when the organization's rollout lacks segment lipsync and section expansion. A dialogueEdit that removes more speech than the surrounding footage can absorb returns errorCode dialogue_edit_removal_too_large (422). When the failing section can be identified, `dialogueEditSection` on the error names it; change it and create a new preview before submitting again. Retrying the same preview fails again. Send the optional Idempotency-Key header on the first request and reuse it with the same payload on retries. An accepted replay returns 200 with the original generation's current state and Idempotency-Replayed: true. A retry after that generation ended FAILED or REJECTED starts a new generation instead (201). An API-key request without the header that is identical to one your organization sent in the last 60 seconds returns 409 DUPLICATE_SUBMISSION with the original generationId; send a unique Idempotency-Key with each generation you intend. See [Idempotent Requests](/api-reference/guides/idempotency) for key validation, conflicts, retention, duplicates, and uncertain-outcome recovery.
+Create a lip sync generation with `application/json` — provide each input by `url` or by `assetId` from an uploaded asset. For reusable or large local files, upload them first with POST /v2/assets/upload and pass the returned `assetId`; see [Asset Uploads](/docs/developer-guides/asset-uploads). Use the multipart "Create Generation with Files" form only when uploading direct audio, video, or image file fields; it has a 5 GiB per-file application parser limit, subject to your plan and any lower proxy limits. Nested fields such as input, options, segments, outputAudio, dubParams, and dialogueEdit must be JSON strings in multipart requests. If a `text` input requires speech synthesis and the ElevenLabs provider is temporarily unavailable, the request returns errorCode elevenlabs_service_unavailable: 504 for provider timeouts and 503 for other provider outages for unkeyed requests. Keyed uncertain outcomes return 503 IDEMPOTENCY_OUTCOME_UNKNOWN instead. An older dialogueEdit preview without segment lipsync and section expansion returns dialogue_edit_retime_required (422). Create a new preview from the same transcript and edits. A dialogueEdit that removes more speech than the surrounding footage can absorb returns errorCode dialogue_edit_removal_too_large (422). When the failing section can be identified, `dialogueEditSection` on the error names it; change it and create a new preview before submitting again. Retrying the same preview fails again. A video input `url` that links to a single TikTok, Instagram, Facebook, or YouTube video is imported first: the generation is created PENDING and starts once the video is downloaded, or ends FAILED with errorCode import_failed if the import fails. A linked audio input, or a linked video in a segments or dubbing request, returns 409 import_in_progress until its import finishes; send the same request (with the same Idempotency-Key, if any) again after Retry-After. Link imports can also return 403 import_not_enabled, 422 import_failed, 429 import_daily_limit_reached or concurrency_limit_reached, and 503 import_unavailable. See [Asset Uploads](/docs/developer-guides/asset-uploads#import-a-social-video-link). Send the optional Idempotency-Key header on the first request and reuse it with the same payload on retries. An accepted replay returns 200 with the original generation's current state and Idempotency-Replayed: true. A retry after that generation ended FAILED or REJECTED starts a new generation instead (201). An API-key request without the header that is identical to one your organization sent in the last 60 seconds returns 409 DUPLICATE_SUBMISSION with the original generationId; send a unique Idempotency-Key with each generation you intend. See [Idempotent Requests](/docs/api-reference/guides/idempotency) for key validation, conflicts, retention, duplicates, and uncertain-outcome recovery.
 </dd>
 </dl>
 </dd>
@@ -1833,7 +2703,7 @@ client.generations.create(
 <dl>
 <dd>
 
-**input:** `typing.Sequence[Input]` — Normal lipsync requests must include exactly one visual input (video or image) and one audio or text input. Dubbed lipsync requests using dubParams must include exactly one video input and no audio or text input, because Sync extracts the dubbing source audio from that video. Image inputs are only supported with the sync-3 model. When using segments, audio or text inputs can carry unique refId values.
+**input:** `typing.Sequence[Input]` — Normal lipsync requests must include exactly one visual input (video or image) and one audio or text input. Dubbed lipsync requests using dubParams must include exactly one video input and no audio or text input, because Sync extracts the dubbing source audio from that video. Image inputs are only supported with the sync-3 model. When using segments, audio or text inputs can carry unique refId values. At most 102 inputs.
     
 </dd>
 </dl>
@@ -1857,7 +2727,7 @@ client.generations.create(
 <dl>
 <dd>
 
-**segments:** `typing.Optional[typing.Sequence[GenerationSegment]]` — segments definition list. When provided, allows defining one or more video segments with different audio inputs for each segment. Each segment specifies a time range and references an audio input by refId.
+**segments:** `typing.Optional[typing.Sequence[GenerationSegment]]` — segments definition list. When provided, allows defining one or more video segments with different audio inputs for each segment. Each segment specifies a time range and references an audio input by refId. At most 100 segments.
     
 </dd>
 </dl>
@@ -1905,7 +2775,7 @@ client.generations.create(
 <dl>
 <dd>
 
-**dialogue_edit:** `typing.Optional[DialogueEditReference]` — Use the id of a completed dialogue edit from POST /v2/dialogue-edits to supply the audio and edited regions. Requires a preview that ran segment lipsync and section expansion (see the job's segmentLipsyncEnabled and sectionExpansionEnabled). Send exactly one video input, the same video the dialogue edit was made from, and no audio input, segments or dubParams. Billing, status, wait and webhooks work as for any generation.
+**dialogue_edit:** `typing.Optional[DialogueEditReference]` — Use the id of a completed dialogue edit from POST /v2/dialogue-edits to supply the audio and edited regions. Requires a preview that ran segment lipsync and section expansion (see the job's segmentLipsyncEnabled and sectionExpansionEnabled). Send exactly one video input, the same video the dialogue edit was made from, and no audio input, segments or dubParams. Billing, status, wait and webhooks work as for any generation. Also accepted in batch rows for organizations with dialogue-edit batches enabled.
     
 </dd>
 </dl>
@@ -1937,7 +2807,7 @@ client.generations.create(
 <dl>
 <dd>
 
-The multipart/form-data form of `POST /v2/generate` — the same endpoint as "Create Generation", for uploading local files directly instead of passing URLs. Send each file under a field named for its type (`video`, `image`, `audio`), at most one of each. The application parser allows up to 5 GiB (5 × 1024³ bytes) per file, 3 files, 32 fields, 35 total parts, and 1 MiB per field. A file over the parser limit returns 413 generation_input_validation_failed, and a file over your plan limit returns 422 file_size_exceeds_plan_limit. Proxy limits may be lower; this ceiling does not guarantee a 5 GiB direct transfer. Each file is saved as an asset in your organization and passed to the generation by `assetId`. For large files, upload via POST /v2/assets/upload first and pass the `assetId`, so retries don't resend the file. Nested fields such as `input`, `options`, `segments`, `outputAudio`, `dubParams`, and `dialogueEdit` must be sent as JSON strings in multipart requests. Image inputs are sync-3 only. If a `text` input requires speech synthesis and the ElevenLabs provider is temporarily unavailable, the request returns errorCode elevenlabs_service_unavailable: 504 for provider timeouts and 503 for other provider outages for unkeyed requests. Keyed uncertain outcomes return 503 IDEMPOTENCY_OUTCOME_UNKNOWN instead. An API-key request that passes dialogueEdit is refused with errorCode dialogue_edit_retime_required (422) when the organization's rollout lacks segment lipsync and section expansion. A dialogueEdit that removes more speech than the surrounding footage can absorb returns errorCode dialogue_edit_removal_too_large (422). When the failing section can be identified, `dialogueEditSection` on the error names it; change it and create a new preview before submitting again. Retrying the same preview fails again. Send the optional Idempotency-Key header on the first request and reuse it with the same payload on retries. An accepted replay returns 200 with the original generation's current state and Idempotency-Replayed: true. A retry after that generation ended FAILED or REJECTED starts a new generation instead (201). An API-key request without the header that is identical to one your organization sent in the last 60 seconds returns 409 DUPLICATE_SUBMISSION with the original generationId; send a unique Idempotency-Key with each generation you intend. See [Idempotent Requests](/api-reference/guides/idempotency) for key validation, conflicts, retention, duplicates, and uncertain-outcome recovery.
+The multipart/form-data form of `POST /v2/generate` — the same endpoint as "Create Generation", for uploading local files directly instead of passing URLs. Send each file under a field named for its type (`video`, `image`, `audio`), at most one of each. The application parser allows up to 5 GiB (5 × 1024³ bytes) per file, 3 files, 32 fields, 35 total parts, and 1 MiB per field. A file over the parser limit returns 413 generation_input_validation_failed, and a file over your plan limit returns 422 file_size_exceeds_plan_limit. A malformed or truncated multipart body, an unsupported file field, or too many fields or parts returns 400 generation_input_validation_failed. Let your HTTP client build the multipart boundaries and send only the documented fields. Proxy limits may be lower; this ceiling does not guarantee a 5 GiB direct transfer. Each file is saved as an asset in your organization and passed to the generation by `assetId`. For large files, upload via POST /v2/assets/upload first and pass the `assetId`, so retries don't resend the file. Nested fields such as `input`, `options`, `segments`, `outputAudio`, `dubParams`, and `dialogueEdit` must be sent as JSON strings in multipart requests. Image inputs are sync-3 only. If a `text` input requires speech synthesis and the ElevenLabs provider is temporarily unavailable, the request returns errorCode elevenlabs_service_unavailable: 504 for provider timeouts and 503 for other provider outages for unkeyed requests. Keyed uncertain outcomes return 503 IDEMPOTENCY_OUTCOME_UNKNOWN instead. An older dialogueEdit preview without segment lipsync and section expansion returns dialogue_edit_retime_required (422). Create a new preview from the same transcript and edits. A dialogueEdit that removes more speech than the surrounding footage can absorb returns errorCode dialogue_edit_removal_too_large (422). When the failing section can be identified, `dialogueEditSection` on the error names it; change it and create a new preview before submitting again. Retrying the same preview fails again. Send the optional Idempotency-Key header on the first request and reuse it with the same payload on retries. An accepted replay returns 200 with the original generation's current state and Idempotency-Replayed: true. A retry after that generation ended FAILED or REJECTED starts a new generation instead (201). An API-key request without the header that is identical to one your organization sent in the last 60 seconds returns 409 DUPLICATE_SUBMISSION with the original generationId; send a unique Idempotency-Key with each generation you intend. See [Idempotent Requests](/docs/api-reference/guides/idempotency) for key validation, conflicts, retention, duplicates, and uncertain-outcome recovery.
 </dd>
 </dl>
 </dd>
@@ -2029,7 +2899,7 @@ typing.Optional[core.File]` — See core.File for more documentation
 <dl>
 <dd>
 
-**segments:** `typing.Optional[typing.List[GenerationSegment]]` — Optional segment definitions, encoded as a JSON string in multipart requests.
+**segments:** `typing.Optional[typing.List[GenerationSegment]]` — Optional segment definitions, encoded as a JSON string in multipart requests. Each audioInput.refId must name an audio or text input sent in input by url, assetId, or text. An uploaded audio file has no refId, so segments can't reference it.
     
 </dd>
 </dl>
@@ -2155,7 +3025,7 @@ client.generations.get(
 <dl>
 <dd>
 
-**wait:** `typing.Optional[bool]` — When true, long-poll: hold the request open until the generation reaches a terminal status (COMPLETED/FAILED/REJECTED) or the timeout elapses, then return the latest state. Waits are short (10s max) — treat this as a convenience for jobs about to finish, and poll again (the response includes a `Retry-After: 2` header) or use a webhook for longer jobs. wait=true responses also carry `X-Sync-Wait-Mode: long_poll` and `X-Sync-Wait-Timeout-Seconds` headers. Cannot be combined with include=progress.
+**wait:** `typing.Optional[bool]` — When true, long-poll: hold the request open until the generation reaches a terminal status (COMPLETED/NO_OP/FAILED/REJECTED) or the timeout elapses, then return the latest state. Waits are short (10s max) — treat this as a convenience for jobs about to finish, and poll again (the response includes a `Retry-After: 2` header) or use a webhook for longer jobs. wait=true responses also carry `X-Sync-Wait-Mode: long_poll` and `X-Sync-Wait-Timeout-Seconds` headers. Cannot be combined with include=progress.
     
 </dd>
 </dl>
@@ -2171,7 +3041,7 @@ client.generations.get(
 <dl>
 <dd>
 
-**include:** `typing.Optional[str]` — Comma-separated extra fields to include. include=progress adds a progress_percent field (fetched live from the inference service).
+**include:** `typing.Optional[str]` — Comma-separated extra fields to include. include=progress adds a `progress` object with the render stage, measured progress and the expected finish time. Works for generations created through the API as well as in sync's own apps.
     
 </dd>
 </dl>
@@ -2225,18 +3095,12 @@ receive the watermarked derivative when present. Entitled plans (such
 as v2 Creator and v3 Starter or higher) receive the clean output when
 available. Historical outputs can have the watermark burned in, so an
 upgrade does not guarantee every old output becomes watermark-free.
-Outputs created without a watermark can remain clean after a downgrade.
-If no watermarked derivative exists, the resolver retains its existing
-fallback to the original output; changing plans does not rewrite files.
+Changing plans does not rewrite historical files.
 This endpoint does not generate a new render or remove burned-in watermarks.
 
-Signed S3 URLs request seven-day validity, but credential expiry,
-revocation, access changes, or file deletion can make them unusable
-sooner. Request this endpoint again for a fresh signed URL while the
-output is still available. The selected S3 file is checked before
-signing; a successful response does not guarantee future availability.
-Older URL-only records return their stored URL unchanged, without
-checking its availability or extending its original expiration.
+Signed URLs can expire or become unavailable before their nominal
+validity. Request this endpoint again for a fresh URL while the output
+is still available.
 These URLs are download credentials: keep them private.
 
 Errors use the standard JSON error body and stable `errorCode`:
@@ -2249,7 +3113,7 @@ Errors use the standard JSON error body and stable `errorCode`:
 | 404 | `generation_output_unavailable` | No eligible output reference or the selected file is missing; contact support. |
 | 409 | `generation_not_ready` | Pending or processing; poll Get Generation until COMPLETED. |
 | 422 | `generation_not_downloadable` | Failed or rejected; inspect the generation error. |
-| 503 | `generation_download_unavailable` | Storage lookup or signing failed; retry with backoff. |
+| 503 | `generation_download_unavailable` | The download URL could not be prepared; retry with backoff. |
 
 Authentication also returns 422 for draft organizations. Requesting a
 download URL does not create a project, incur a generation charge, or
@@ -2330,6 +3194,20 @@ client.generations.download(
 <details><summary><code>client.generations.<a href="src/sync/generations/client.py">list</a>(...)</code></summary>
 <dl>
 <dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+list sync. labs generations and filter jobs by status or generation id. review authentication, request parameters, response objects, and api errors.
+</dd>
+</dl>
+</dd>
+</dl>
 
 #### 🔌 Usage
 
@@ -2488,7 +3366,7 @@ client.generations.estimate_cost(
 <dl>
 <dd>
 
-**fps:** `typing.Optional[float]` — Source video frame rate. When omitted, credit-billed organizations are quoted at 25, the rate generation admission holds credits at when the source frame rate cannot be read; other organizations at 30.
+**fps:** `typing.Optional[float]` — Finite, positive source video frame rate. For standard plans, defaults to 25 for credit billing and 30 for usage billing when omitted.
     
 </dd>
 </dl>
@@ -2776,7 +3654,7 @@ client.projects.create(
 <dl>
 <dd>
 
-**name:** `str` — A name for the project.
+**name:** `str` — A name for the project (1–255 characters).
     
 </dd>
 </dl>
@@ -2895,7 +3773,7 @@ client.projects.list(
 <dl>
 <dd>
 
-**cursor:** `typing.Optional[str]` — Cursor for pagination.
+**cursor:** `typing.Optional[str]` — The nextCursor UUID returned by the previous page. A non-UUID value returns 400.
     
 </dd>
 </dl>
@@ -3218,7 +4096,7 @@ client.projects.update(
 <dl>
 <dd>
 
-**name:** `typing.Optional[str]` — A new name for the project.
+**name:** `typing.Optional[str]` — A new name for the project (1–255 characters).
     
 </dd>
 </dl>
@@ -3345,7 +4223,7 @@ client.projects.delete(
 <dl>
 <dd>
 
-Starts a word-level transcription of a window of a video, the first step of a dialogue edit. Provide exactly one of `sourceVideoUrl` or `sourceAudioUrl`, both hosted in sync. storage (upload via `POST /v2/assets/upload`). Passing pre-extracted audio skips the server-side download and transcode. Poll `GET /v2/transcriptions/{id}` until `status` is `COMPLETED`, then pass the `transcript` and your edits to `POST /v2/dialogue-edits`. An identical source and window returns the existing job instead of starting a new one. Transcription is not billed.
+Starts a word-level transcription of a window of a video, the first step of a dialogue edit. Provide exactly one of `sourceVideoUrl` or `sourceAudioUrl`, both hosted in sync. storage (upload via `POST /v2/assets/upload`). Passing pre-extracted audio skips the server-side download and transcode. Poll `GET /v2/transcriptions/{id}` until `status` is `COMPLETED`, then pass the `transcript` and your edits to `POST /v2/dialogue-edits`. An identical source and window returns the existing job instead of starting a new one. An `endMs` past the end of the source is clamped to it, and the job echoes the effective end in `sourceEndMs`. Transcription is not billed.
 </dd>
 </dl>
 </dd>
@@ -3400,7 +4278,7 @@ client.transcriptions.create(
 <dl>
 <dd>
 
-**start_ms:** `typing.Optional[int]` — Start of the window to transcribe, in milliseconds from the start of the source. Defaults to 0.
+**start_ms:** `typing.Optional[int]` — Start of the window to transcribe, in milliseconds from the start of the source. Defaults to 0. A start at or past the end of the source video returns a 422 naming startMs.
     
 </dd>
 </dl>
@@ -3408,7 +4286,7 @@ client.transcriptions.create(
 <dl>
 <dd>
 
-**end_ms:** `typing.Optional[int]` — End of the window to transcribe, in milliseconds from the start of the source. Omit to transcribe to the end. The window cannot exceed 60 minutes.
+**end_ms:** `typing.Optional[int]` — End of the window to transcribe, in milliseconds from the start of the source. Omit to transcribe to the end. The window cannot exceed 60 minutes. An end past the end of the source is clamped to it, and the job reports the end it used in sourceEndMs.
     
 </dd>
 </dl>
@@ -3495,6 +4373,295 @@ client.transcriptions.get(
 <dd>
 
 **id:** `TranscriptionJobId` — Transcription job id.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
+<details><summary><code>client.transcriptions.<a href="src/sync/transcriptions/client.py">get_speaker_analysis</a>(...)</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Returns which face belongs to each transcript speaker. Each speaker is matched, with an avatar, evidence and a face track, or uncertain, with a reason. Analysis may already be available for video transcriptions of your own media. Read this endpoint before starting an analysis. Poll while `status` is `processing`, until it is `completed` or `unavailable`. Requires a completed transcription.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+from sync import Sync
+
+client = Sync(
+    api_key="YOUR_API_KEY",
+)
+client.transcriptions.get_speaker_analysis(
+    id="6533643b-aceb-4c40-967e-d9ba9baac39e",
+)
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**id:** `TranscriptionJobId` — Transcription job id.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
+<details><summary><code>client.transcriptions.<a href="src/sync/transcriptions/client.py">analyze_speakers</a>(...)</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Matches each transcript speaker to the face that talks during their words. Read `GET /v2/transcriptions/{id}/speaker-analysis` first, and call this to start an analysis that wasn't run or to retry one that ended `unavailable`. Pass the job's `revision` and `sourceVideoUrl`. Supports up to 2 minutes of video and 8 speakers, and 3 requests per minute.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+from sync import Sync
+
+client = Sync(
+    api_key="YOUR_API_KEY",
+)
+client.transcriptions.analyze_speakers(
+    id="id",
+    revision="revision",
+    source_video_url="sourceVideoUrl",
+)
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**id:** `TranscriptionJobId` — Transcription job id.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**revision:** `str` — The revision of the transcription job.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**source_video_url:** `str` — The transcription's source video URL.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**retry:** `typing.Optional[bool]` — Set to true to rerun an analysis that ended unavailable. A completed or running analysis is returned as is.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**request_options:** `typing.Optional[RequestOptions]` — Request-specific configuration.
+    
+</dd>
+</dl>
+</dd>
+</dl>
+
+
+</dd>
+</dl>
+</details>
+
+<details><summary><code>client.transcriptions.<a href="src/sync/transcriptions/client.py">slice_face_track</a>(...)</code></summary>
+<dl>
+<dd>
+
+#### 📝 Description
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+Cuts frames [`startFrame`, `endFrame`) at `fps` from a matched speaker's face track and returns a bounding-boxes file for that segment. Pass the `url` as the segment's `active_speaker_detection.bounding_boxes_url` so the segment lipsyncs that speaker. `url` is null when the face is on none of those frames; leave that segment unlipsynced or use auto-detect. 60 requests per minute.
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### 🔌 Usage
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+```python
+from sync import Sync
+
+client = Sync(
+    api_key="YOUR_API_KEY",
+)
+client.transcriptions.slice_face_track(
+    id="6533643b-aceb-4c40-967e-d9ba9baac39e",
+    revision="3f9a1c0e7b2d4a6f8e1c3b5d7f9a0c2e4b6d8f0a1c3e5b7d9f1a3c5e7b9d0f2a",
+    speaker_id="speaker_0",
+    start_frame=100,
+    end_frame=250,
+    fps=25.0,
+)
+
+```
+</dd>
+</dl>
+</dd>
+</dl>
+
+#### ⚙️ Parameters
+
+<dl>
+<dd>
+
+<dl>
+<dd>
+
+**id:** `TranscriptionJobId` — Transcription job id.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**revision:** `str` — The revision of the transcription job.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**speaker_id:** `str` — Id of a matched speaker.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**start_frame:** `int` — First frame of the segment.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**end_frame:** `int` — Frame after the last frame of the segment. Must be greater than startFrame.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**fps:** `float` — Frame rate of your source frame grid.
+    
+</dd>
+</dl>
+
+<dl>
+<dd>
+
+**skip:** `typing.Optional[SpeakerFaceTrackSliceFrames]` — Frames inside the segment that its footage no longer holds, for example because a cut removed them. Must lie strictly inside the segment.
     
 </dd>
 </dl>
@@ -3816,7 +4983,7 @@ client.tts.get_job(
 <dl>
 <dd>
 
-List the voices available to your organization — built-in ElevenLabs voices plus any you have cloned. Use a voice's id as voiceId in POST /v2/tts and in generation text inputs. A voice that carries a `restriction` cannot currently synthesize speech — check `restriction` and choose another voice. Voice availability can change over time, so re-check it rather than assuming a voice stays usable.
+List the voices available to your organization — built-in ElevenLabs voices plus any you have cloned. Use a voice's id as voiceId in POST /v2/tts and in generation text inputs. A voice that carries a `restriction` cannot currently synthesize speech — check `restriction` and choose another voice. Voice availability can change over time, so re-check it rather than assuming a voice stays usable. During a provider outage, x-sync-voices-stale: true indicates the last complete list, up to 24 hours old. Retry later for current voices.
 </dd>
 </dl>
 </dd>
@@ -3884,7 +5051,7 @@ client.voices.list()
 <dl>
 <dd>
 
-Retrieve a single voice by the same id values GET /v2/voices exposes — a built-in ElevenLabs voice id or the UUID of a voice cloned by your organization. A missing or foreign-organization id returns a 404 with errorCode voice_not_found.
+Retrieve a single voice by the same id values GET /v2/voices exposes — a built-in ElevenLabs voice id or the UUID of a voice cloned by your organization. A missing or foreign-organization id returns a 404 with errorCode voice_not_found. During a provider outage, a saved voice can be returned with x-sync-voices-stale: true. An ID absent from that saved list returns 503 rather than 404; retry after recovery. A pending clone returns 409 voice_clone_pending. Poll this GET until 200 (ready) or 404 (no voice was created); do not submit another clone while it is pending.
 </dd>
 </dl>
 </dd>
@@ -3962,11 +5129,11 @@ client.voices.get(
 <dl>
 <dd>
 
-Clone a custom voice from an audio or video sample and get back its id for use in POST /v2/tts and generation text inputs.
+Clone a custom voice from an audio or video sample and get back its id for use in POST /v2/tts and generation text inputs. Provide exactly one sample source: url, assetId, or sampleUrls with 1–10 hosted URLs.
 
-The exact sequence for a local file: (1) request a presigned URL via POST /v2/assets/upload, (2) PUT the file bytes to the returned uploadUrl, (3) clone from the returned url (or register it via POST /v2/assets and clone from the assetId). Samples must be hosted in sync. labs storage — external URLs are rejected with errorCode voice_sample_upload_required. Video sources have their audio track extracted automatically (first 2 minutes). Video sources staged for extraction are limited to 1 GiB (1,073,741,824 bytes); larger sources return 413 voice_sample_source_too_large. This endpoint allows 10 requests per hour per API key (or per signed-in user).
+The exact sequence for a local file: (1) request a presigned URL via POST /v2/assets/upload, (2) PUT the file bytes to the returned uploadUrl, (3) clone from the returned url (or register it via POST /v2/assets and clone from the assetId). Samples must be hosted in sync. labs storage — external URLs are rejected with errorCode voice_sample_upload_required. Video sources have their audio track extracted automatically (first 2 minutes). Video sources staged for extraction are limited to 1 GiB (1,073,741,824 bytes); larger sources return 413 voice_sample_source_too_large. This endpoint allows 10 requests per hour per API key (or per signed-in user). Audio samples are limited to 10 MiB (10,485,760 bytes), or 50 MiB (52,428,800 bytes) when you connect your own ElevenLabs API key.
 
-For best results use 30 seconds to 2 minutes of clear, single-speaker speech without background music or noise. Samples that are too short are rejected with errorCode voice_sample_too_short. Clone slots are limited per plan (403 voice_clone_limit_reached) and voice names must be unique within your organization (409 voice_name_conflict). Sample source problems return 422 (voice_sample_not_accessible, voice_sample_type_unsupported, voice_sample_upload_required, voice_sample_extraction_failed); invalid or too-short samples return 400 (voice_sample_invalid, voice_sample_too_short). A 429 may mean the request-rate limit was exceeded or shared provider capacity is busy (voice_clone_busy); follow the response retry guidance. Provider outages return 503 (elevenlabs_service_unavailable).
+For best results use 30 seconds to 2 minutes of clear, single-speaker speech without background music or noise. Samples that are too short are rejected with errorCode voice_sample_too_short. Clone slots are limited per plan (403 voice_clone_limit_reached) and voice names must be unique within your organization (409 voice_name_conflict). An uncertain clone returns 409 voice_clone_pending with voiceId. Poll GET /v2/voices/{voiceId} until 200 or 404 instead of submitting another clone. Sample source problems return 422 (voice_sample_not_accessible, voice_sample_type_unsupported, voice_sample_upload_required, voice_sample_extraction_failed); invalid or too-short samples return 400 (voice_sample_invalid, voice_sample_too_short). A 429 may mean the request-rate limit was exceeded or shared provider capacity is busy (voice_clone_busy); follow the response retry guidance. Provider outages return 503 (elevenlabs_service_unavailable).
 </dd>
 </dl>
 </dd>
@@ -4070,7 +5237,7 @@ client.voices.clone(
 <dl>
 <dd>
 
-Delete a cloned voice, freeing a clone slot. Unknown ids return 404 with errorCode `voice_not_found`.
+Delete a cloned voice, freeing a clone slot. Unknown ids return 404 with errorCode `voice_not_found`. Deletion returns 409 while a clone is still processing. If it returns 503, the voice is retained; retry after the provider recovers.
 </dd>
 </dl>
 </dd>

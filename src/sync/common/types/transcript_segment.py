@@ -4,6 +4,9 @@ from ...core.unchecked_base_model import UncheckedBaseModel
 import pydantic
 import typing
 from .transcript_word import TranscriptWord
+import typing_extensions
+from .transcript_speaker_label_flag import TranscriptSpeakerLabelFlag
+from ...core.serialization import FieldMetadata
 from ...core.pydantic_utilities import IS_PYDANTIC_V2
 
 
@@ -20,6 +23,13 @@ class TranscriptSegment(UncheckedBaseModel):
     words: typing.List[TranscriptWord] = pydantic.Field()
     """
     The words in the segment, in order.
+    """
+
+    speaker_label_flags: typing_extensions.Annotated[
+        typing.Optional[typing.List[TranscriptSpeakerLabelFlag]], FieldMetadata(alias="speakerLabelFlags")
+    ] = pydantic.Field(default=None)
+    """
+    Reasons to review this segment's speaker label. An empty list means no warning was detected. These flags do not guarantee speaker accuracy. Returned by transcription reads and ignored on dialogue-edit submission.
     """
 
     if IS_PYDANTIC_V2:

@@ -25,7 +25,7 @@ class DialogueEditChange(UncheckedBaseModel):
 
     pronunciation: typing.Optional[str] = pydantic.Field(default=None)
     """
-    Optional plain-text respelling the voice speaks instead of `replacement`, for names the voice says wrong (for example "shivawn" for "Siobhan"). The transcript and results keep `replacement`.
+    Optional plain-text respelling the voice speaks instead of `replacement`, for names the voice says wrong (for example "shivawn" for "Siobhan"). The transcript and results keep `replacement`. 1 to 100 characters of letters, spaces, hyphens, apostrophes, and periods, with at least one letter.
     """
 
     if IS_PYDANTIC_V2:

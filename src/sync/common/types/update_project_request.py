@@ -15,7 +15,7 @@ class UpdateProjectRequest(UncheckedBaseModel):
 
     name: typing.Optional[str] = pydantic.Field(default=None)
     """
-    A new name for the project.
+    A new name for the project (1–255 characters).
     """
 
     description: typing.Optional[str] = pydantic.Field(default=None)

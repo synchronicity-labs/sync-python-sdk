@@ -4,6 +4,7 @@ import typing
 from ..core.client_wrapper import SyncClientWrapper
 from ..common.types.asset_sort import AssetSort
 from ..common.types.asset_type import AssetType
+from ..common.types.asset_audio_source import AssetAudioSource
 from ..core.request_options import RequestOptions
 from ..core.http_response import HttpResponse
 from ..common.types.paginated_assets_response import PaginatedAssetsResponse
@@ -13,17 +14,24 @@ from ..common.types.generation_error import GenerationError
 from ..common.errors.internal_server_error import InternalServerError
 from json.decoder import JSONDecodeError
 from ..core.api_error import ApiError
-from ..common.types.asset_id import AssetId
+from ..common.types.asset_ids import AssetIds
 from ..common.types.asset import Asset
+from ..core.serialization import convert_and_respect_annotation_metadata
+from ..common.errors.bad_request_error import BadRequestError
+from ..common.types.asset_id import AssetId
 from ..core.jsonable_encoder import jsonable_encoder
 from ..common.errors.not_found_error import NotFoundError
+from ..common.types.find_uploaded_asset_response import FindUploadedAssetResponse
 from ..common.types.asset_upload_response import AssetUploadResponse
-from ..common.errors.bad_request_error import BadRequestError
 from ..common.errors.unprocessable_entity_error import UnprocessableEntityError
 from ..common.types.asset_visibility import AssetVisibility
 from ..common.types.project_id import ProjectId
 from ..common.types.asset_input_type import AssetInputType
 from ..common.errors.forbidden_error import ForbiddenError
+from ..common.errors.link_import_in_progress_error import LinkImportInProgressError
+from ..common.types.link_import_error import LinkImportError
+from ..common.errors.link_import_too_many_requests_error import LinkImportTooManyRequestsError
+from ..common.errors.service_unavailable_error import ServiceUnavailableError
 from ..common.types.delete_asset_response import DeleteAssetResponse
 from ..core.client_wrapper import AsyncClientWrapper
 from ..core.http_response import AsyncHttpResponse
@@ -45,6 +53,7 @@ class RawAssetsClient:
         search_query: typing.Optional[str] = None,
         sort_by: typing.Optional[AssetSort] = None,
         types: typing.Optional[typing.Sequence[AssetType]] = None,
+        audio_source: typing.Optional[AssetAudioSource] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[PaginatedAssetsResponse]:
         """
@@ -59,7 +68,7 @@ class RawAssetsClient:
             Maximum number of assets to return (1-100).
 
         cursor : typing.Optional[str]
-            Cursor for pagination.
+            The nextCursor UUID returned by the previous page. A non-UUID value returns 400.
 
         search_query : typing.Optional[str]
             Search assets by name.
@@ -69,6 +78,9 @@ class RawAssetsClient:
 
         types : typing.Optional[typing.Sequence[AssetType]]
             Filter by asset types. Accepts multiple types as a comma-separated list (AUDIO, VIDEO, IMAGE).
+
+        audio_source : typing.Optional[AssetAudioSource]
+            Filter audio by source. Video and image assets are unaffected.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -88,6 +100,7 @@ class RawAssetsClient:
                 "searchQuery": search_query,
                 "sortBy": sort_by,
                 "types": types,
+                "audioSource": audio_source,
             },
             request_options=request_options,
         )
@@ -101,6 +114,299 @@ class RawAssetsClient:
                     ),
                 )
                 return HttpResponse(response=_response, data=_data)
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 500:
+                raise InternalServerError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, body=_response.text)
+        raise ApiError(status_code=_response.status_code, body=_response_json)
+
+    def count(
+        self,
+        *,
+        project_id: typing.Optional[str] = None,
+        user_id: typing.Optional[str] = None,
+        search_query: typing.Optional[str] = None,
+        types: typing.Optional[typing.Sequence[AssetType]] = None,
+        audio_source: typing.Optional[AssetAudioSource] = None,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> HttpResponse[int]:
+        """
+        Count the assets visible to your organization after applying the filters.
+
+        Parameters
+        ----------
+        project_id : typing.Optional[str]
+            Filter assets by project ID.
+
+        user_id : typing.Optional[str]
+            Filter assets by owning user ID.
+
+        search_query : typing.Optional[str]
+            Search assets by name.
+
+        types : typing.Optional[typing.Sequence[AssetType]]
+            Filter by asset types. Accepts a comma-separated list or repeated values.
+
+        audio_source : typing.Optional[AssetAudioSource]
+            Filter audio by source. Video and image assets are unaffected.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        HttpResponse[int]
+            Number of matching assets.
+        """
+        _response = self._client_wrapper.httpx_client.request(
+            "v2/assets/count",
+            method="GET",
+            params={
+                "projectId": project_id,
+                "userId": user_id,
+                "searchQuery": search_query,
+                "types": types,
+                "audioSource": audio_source,
+            },
+            request_options=request_options,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    int,
+                    construct_type(
+                        type_=int,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return HttpResponse(response=_response, data=_data)
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 500:
+                raise InternalServerError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, body=_response.text)
+        raise ApiError(status_code=_response.status_code, body=_response_json)
+
+    def get_many(
+        self, *, ids: AssetIds, request_options: typing.Optional[RequestOptions] = None
+    ) -> HttpResponse[typing.List[Asset]]:
+        """
+        Retrieve multiple assets by ID. Assets you cannot access are omitted from the response.
+
+        Parameters
+        ----------
+        ids : AssetIds
+            One asset ID, or a list of 1–100 asset IDs.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        HttpResponse[typing.List[Asset]]
+            Matching assets, in the service response order.
+        """
+        _response = self._client_wrapper.httpx_client.request(
+            "v2/assets/batch",
+            method="POST",
+            json={
+                "ids": convert_and_respect_annotation_metadata(object_=ids, annotation=AssetIds, direction="write"),
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    typing.List[Asset],
+                    construct_type(
+                        type_=typing.List[Asset],  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return HttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 500:
+                raise InternalServerError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, body=_response.text)
+        raise ApiError(status_code=_response.status_code, body=_response_json)
+
+    def get_download_url(
+        self, id: AssetId, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> HttpResponse[str]:
+        """
+        Get a URL for downloading an asset. The response body is a plain-text URL. Fetch that URL separately; do not send your API key to it.
+
+        Parameters
+        ----------
+        id : AssetId
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        HttpResponse[str]
+            Unquoted asset download URL in a text/plain body.
+        """
+        _response = self._client_wrapper.httpx_client.request(
+            f"v2/assets/{jsonable_encoder(id)}/download",
+            method="GET",
+            request_options=request_options,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                return _response.text  # type: ignore
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 404:
+                raise NotFoundError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 500:
+                raise InternalServerError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, body=_response.text)
+        raise ApiError(status_code=_response.status_code, body=_response_json)
+
+    def find_uploaded(
+        self, *, content_sha256: str, type: AssetType, request_options: typing.Optional[RequestOptions] = None
+    ) -> HttpResponse[FindUploadedAssetResponse]:
+        """
+        Find the newest live asset registered with the same API key, SHA-256 digest, and type. Reuse its id instead of uploading the file again. Assets registered with another API key do not match, even within the same organization. Returns asset null when no asset matches.
+
+        Parameters
+        ----------
+        content_sha256 : str
+            SHA-256 digest of the file bytes as 64 lowercase hexadecimal characters.
+
+        type : AssetType
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        HttpResponse[FindUploadedAssetResponse]
+        """
+        _response = self._client_wrapper.httpx_client.request(
+            "v2/assets/uploaded",
+            method="GET",
+            params={
+                "contentSha256": content_sha256,
+                "type": type,
+            },
+            request_options=request_options,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    FindUploadedAssetResponse,
+                    construct_type(
+                        type_=FindUploadedAssetResponse,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return HttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
             if _response.status_code == 401:
                 raise UnauthorizedError(
                     typing.cast(
@@ -196,7 +502,7 @@ class RawAssetsClient:
         self, *, file_name: str, content_type: str, size: int, request_options: typing.Optional[RequestOptions] = None
     ) -> HttpResponse[AssetUploadResponse]:
         """
-        Request a presigned URL to upload a local file. PUT the file bytes to the returned uploadUrl with the same Content-Type, then register the file as an asset via POST /v2/assets using the returned url. Single uploads are capped at 5GB.
+        Request a presigned URL to upload a local file. PUT the file bytes to the returned uploadUrl with the same Content-Type, then register the file as an asset via POST /v2/assets using the returned url. Single uploads are capped at 5 GiB (5,368,709,120 bytes).
 
         Parameters
         ----------
@@ -207,7 +513,7 @@ class RawAssetsClient:
             The MIME content type of the file (e.g. video/mp4).
 
         size : int
-            The size of the file in bytes. Single uploads are capped at 5GB.
+            The size of the file in bytes. Single uploads are capped at 5 GiB (5,368,709,120 bytes).
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -298,6 +604,7 @@ class RawAssetsClient:
         duration_seconds: typing.Optional[float] = OMIT,
         width: typing.Optional[int] = OMIT,
         height: typing.Optional[int] = OMIT,
+        content_sha256: typing.Optional[str] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[Asset]:
         """
@@ -305,10 +612,12 @@ class RawAssetsClient:
 
         projectId is optional. When provided it must reference a project in your organization — a stale or foreign id is rejected with a 422 and errorCode project_not_found; omit the field if you don't need the asset attached to a project.
 
+        A link to a single TikTok, Instagram, Facebook, or YouTube video is imported instead of registered. The response is 409 import_in_progress until the video is downloaded; send the same request again after Retry-After to get the imported VIDEO asset, named after the video. A failed import returns 422 import_failed; check the message or upload the file instead. A 429 means the concurrent or daily import limit was reached; follow Retry-After. Link imports return 403 import_not_enabled when unavailable for your account and 503 import_unavailable when temporarily unavailable. See [Asset Uploads](/docs/developer-guides/asset-uploads#import-a-social-video-link).
+
         Parameters
         ----------
         url : str
-            The public URL of the media to register — e.g. the url returned by POST /v2/assets/upload. Registration verifies the upload happened and enforces plan limits on the actual file size.
+            The public URL of the media to register — e.g. the url returned by POST /v2/assets/upload. Registration verifies the upload happened and enforces plan limits on the actual file size. A link to a single TikTok, Instagram, Facebook, or YouTube video is imported as a VIDEO asset instead.
 
         type : AssetType
             The type of asset.
@@ -343,6 +652,9 @@ class RawAssetsClient:
         height : typing.Optional[int]
             Height in pixels for video or image assets.
 
+        content_sha256 : typing.Optional[str]
+            SHA-256 digest of the file's bytes, as 64 lowercase hex characters.
+
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
 
@@ -367,6 +679,7 @@ class RawAssetsClient:
                 "durationSeconds": duration_seconds,
                 "width": width,
                 "height": height,
+                "contentSha256": content_sha256,
             },
             request_options=request_options,
             omit=OMIT,
@@ -401,8 +714,48 @@ class RawAssetsClient:
                         ),
                     )
                 )
+            if _response.status_code == 403:
+                raise ForbiddenError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 409:
+                raise LinkImportInProgressError(
+                    typing.cast(
+                        LinkImportError,
+                        construct_type(
+                            type_=LinkImportError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
             if _response.status_code == 422:
                 raise UnprocessableEntityError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 429:
+                raise LinkImportTooManyRequestsError(
+                    typing.cast(
+                        LinkImportError,
+                        construct_type(
+                            type_=LinkImportError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 503:
+                raise ServiceUnavailableError(
                     typing.cast(
                         GenerationError,
                         construct_type(
@@ -657,6 +1010,7 @@ class AsyncRawAssetsClient:
         search_query: typing.Optional[str] = None,
         sort_by: typing.Optional[AssetSort] = None,
         types: typing.Optional[typing.Sequence[AssetType]] = None,
+        audio_source: typing.Optional[AssetAudioSource] = None,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[PaginatedAssetsResponse]:
         """
@@ -671,7 +1025,7 @@ class AsyncRawAssetsClient:
             Maximum number of assets to return (1-100).
 
         cursor : typing.Optional[str]
-            Cursor for pagination.
+            The nextCursor UUID returned by the previous page. A non-UUID value returns 400.
 
         search_query : typing.Optional[str]
             Search assets by name.
@@ -681,6 +1035,9 @@ class AsyncRawAssetsClient:
 
         types : typing.Optional[typing.Sequence[AssetType]]
             Filter by asset types. Accepts multiple types as a comma-separated list (AUDIO, VIDEO, IMAGE).
+
+        audio_source : typing.Optional[AssetAudioSource]
+            Filter audio by source. Video and image assets are unaffected.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -700,6 +1057,7 @@ class AsyncRawAssetsClient:
                 "searchQuery": search_query,
                 "sortBy": sort_by,
                 "types": types,
+                "audioSource": audio_source,
             },
             request_options=request_options,
         )
@@ -713,6 +1071,299 @@ class AsyncRawAssetsClient:
                     ),
                 )
                 return AsyncHttpResponse(response=_response, data=_data)
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 500:
+                raise InternalServerError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, body=_response.text)
+        raise ApiError(status_code=_response.status_code, body=_response_json)
+
+    async def count(
+        self,
+        *,
+        project_id: typing.Optional[str] = None,
+        user_id: typing.Optional[str] = None,
+        search_query: typing.Optional[str] = None,
+        types: typing.Optional[typing.Sequence[AssetType]] = None,
+        audio_source: typing.Optional[AssetAudioSource] = None,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> AsyncHttpResponse[int]:
+        """
+        Count the assets visible to your organization after applying the filters.
+
+        Parameters
+        ----------
+        project_id : typing.Optional[str]
+            Filter assets by project ID.
+
+        user_id : typing.Optional[str]
+            Filter assets by owning user ID.
+
+        search_query : typing.Optional[str]
+            Search assets by name.
+
+        types : typing.Optional[typing.Sequence[AssetType]]
+            Filter by asset types. Accepts a comma-separated list or repeated values.
+
+        audio_source : typing.Optional[AssetAudioSource]
+            Filter audio by source. Video and image assets are unaffected.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        AsyncHttpResponse[int]
+            Number of matching assets.
+        """
+        _response = await self._client_wrapper.httpx_client.request(
+            "v2/assets/count",
+            method="GET",
+            params={
+                "projectId": project_id,
+                "userId": user_id,
+                "searchQuery": search_query,
+                "types": types,
+                "audioSource": audio_source,
+            },
+            request_options=request_options,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    int,
+                    construct_type(
+                        type_=int,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return AsyncHttpResponse(response=_response, data=_data)
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 500:
+                raise InternalServerError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, body=_response.text)
+        raise ApiError(status_code=_response.status_code, body=_response_json)
+
+    async def get_many(
+        self, *, ids: AssetIds, request_options: typing.Optional[RequestOptions] = None
+    ) -> AsyncHttpResponse[typing.List[Asset]]:
+        """
+        Retrieve multiple assets by ID. Assets you cannot access are omitted from the response.
+
+        Parameters
+        ----------
+        ids : AssetIds
+            One asset ID, or a list of 1–100 asset IDs.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        AsyncHttpResponse[typing.List[Asset]]
+            Matching assets, in the service response order.
+        """
+        _response = await self._client_wrapper.httpx_client.request(
+            "v2/assets/batch",
+            method="POST",
+            json={
+                "ids": convert_and_respect_annotation_metadata(object_=ids, annotation=AssetIds, direction="write"),
+            },
+            request_options=request_options,
+            omit=OMIT,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    typing.List[Asset],
+                    construct_type(
+                        type_=typing.List[Asset],  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return AsyncHttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 500:
+                raise InternalServerError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, body=_response.text)
+        raise ApiError(status_code=_response.status_code, body=_response_json)
+
+    async def get_download_url(
+        self, id: AssetId, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> AsyncHttpResponse[str]:
+        """
+        Get a URL for downloading an asset. The response body is a plain-text URL. Fetch that URL separately; do not send your API key to it.
+
+        Parameters
+        ----------
+        id : AssetId
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        AsyncHttpResponse[str]
+            Unquoted asset download URL in a text/plain body.
+        """
+        _response = await self._client_wrapper.httpx_client.request(
+            f"v2/assets/{jsonable_encoder(id)}/download",
+            method="GET",
+            request_options=request_options,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                return _response.text  # type: ignore
+            if _response.status_code == 401:
+                raise UnauthorizedError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 404:
+                raise NotFoundError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 500:
+                raise InternalServerError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            _response_json = _response.json()
+        except JSONDecodeError:
+            raise ApiError(status_code=_response.status_code, body=_response.text)
+        raise ApiError(status_code=_response.status_code, body=_response_json)
+
+    async def find_uploaded(
+        self, *, content_sha256: str, type: AssetType, request_options: typing.Optional[RequestOptions] = None
+    ) -> AsyncHttpResponse[FindUploadedAssetResponse]:
+        """
+        Find the newest live asset registered with the same API key, SHA-256 digest, and type. Reuse its id instead of uploading the file again. Assets registered with another API key do not match, even within the same organization. Returns asset null when no asset matches.
+
+        Parameters
+        ----------
+        content_sha256 : str
+            SHA-256 digest of the file bytes as 64 lowercase hexadecimal characters.
+
+        type : AssetType
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        AsyncHttpResponse[FindUploadedAssetResponse]
+        """
+        _response = await self._client_wrapper.httpx_client.request(
+            "v2/assets/uploaded",
+            method="GET",
+            params={
+                "contentSha256": content_sha256,
+                "type": type,
+            },
+            request_options=request_options,
+        )
+        try:
+            if 200 <= _response.status_code < 300:
+                _data = typing.cast(
+                    FindUploadedAssetResponse,
+                    construct_type(
+                        type_=FindUploadedAssetResponse,  # type: ignore
+                        object_=_response.json(),
+                    ),
+                )
+                return AsyncHttpResponse(response=_response, data=_data)
+            if _response.status_code == 400:
+                raise BadRequestError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
             if _response.status_code == 401:
                 raise UnauthorizedError(
                     typing.cast(
@@ -810,7 +1461,7 @@ class AsyncRawAssetsClient:
         self, *, file_name: str, content_type: str, size: int, request_options: typing.Optional[RequestOptions] = None
     ) -> AsyncHttpResponse[AssetUploadResponse]:
         """
-        Request a presigned URL to upload a local file. PUT the file bytes to the returned uploadUrl with the same Content-Type, then register the file as an asset via POST /v2/assets using the returned url. Single uploads are capped at 5GB.
+        Request a presigned URL to upload a local file. PUT the file bytes to the returned uploadUrl with the same Content-Type, then register the file as an asset via POST /v2/assets using the returned url. Single uploads are capped at 5 GiB (5,368,709,120 bytes).
 
         Parameters
         ----------
@@ -821,7 +1472,7 @@ class AsyncRawAssetsClient:
             The MIME content type of the file (e.g. video/mp4).
 
         size : int
-            The size of the file in bytes. Single uploads are capped at 5GB.
+            The size of the file in bytes. Single uploads are capped at 5 GiB (5,368,709,120 bytes).
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -912,6 +1563,7 @@ class AsyncRawAssetsClient:
         duration_seconds: typing.Optional[float] = OMIT,
         width: typing.Optional[int] = OMIT,
         height: typing.Optional[int] = OMIT,
+        content_sha256: typing.Optional[str] = OMIT,
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[Asset]:
         """
@@ -919,10 +1571,12 @@ class AsyncRawAssetsClient:
 
         projectId is optional. When provided it must reference a project in your organization — a stale or foreign id is rejected with a 422 and errorCode project_not_found; omit the field if you don't need the asset attached to a project.
 
+        A link to a single TikTok, Instagram, Facebook, or YouTube video is imported instead of registered. The response is 409 import_in_progress until the video is downloaded; send the same request again after Retry-After to get the imported VIDEO asset, named after the video. A failed import returns 422 import_failed; check the message or upload the file instead. A 429 means the concurrent or daily import limit was reached; follow Retry-After. Link imports return 403 import_not_enabled when unavailable for your account and 503 import_unavailable when temporarily unavailable. See [Asset Uploads](/docs/developer-guides/asset-uploads#import-a-social-video-link).
+
         Parameters
         ----------
         url : str
-            The public URL of the media to register — e.g. the url returned by POST /v2/assets/upload. Registration verifies the upload happened and enforces plan limits on the actual file size.
+            The public URL of the media to register — e.g. the url returned by POST /v2/assets/upload. Registration verifies the upload happened and enforces plan limits on the actual file size. A link to a single TikTok, Instagram, Facebook, or YouTube video is imported as a VIDEO asset instead.
 
         type : AssetType
             The type of asset.
@@ -957,6 +1611,9 @@ class AsyncRawAssetsClient:
         height : typing.Optional[int]
             Height in pixels for video or image assets.
 
+        content_sha256 : typing.Optional[str]
+            SHA-256 digest of the file's bytes, as 64 lowercase hex characters.
+
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
 
@@ -981,6 +1638,7 @@ class AsyncRawAssetsClient:
                 "durationSeconds": duration_seconds,
                 "width": width,
                 "height": height,
+                "contentSha256": content_sha256,
             },
             request_options=request_options,
             omit=OMIT,
@@ -1015,8 +1673,48 @@ class AsyncRawAssetsClient:
                         ),
                     )
                 )
+            if _response.status_code == 403:
+                raise ForbiddenError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 409:
+                raise LinkImportInProgressError(
+                    typing.cast(
+                        LinkImportError,
+                        construct_type(
+                            type_=LinkImportError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
             if _response.status_code == 422:
                 raise UnprocessableEntityError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 429:
+                raise LinkImportTooManyRequestsError(
+                    typing.cast(
+                        LinkImportError,
+                        construct_type(
+                            type_=LinkImportError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 503:
+                raise ServiceUnavailableError(
                     typing.cast(
                         GenerationError,
                         construct_type(

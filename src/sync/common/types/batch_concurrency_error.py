@@ -11,7 +11,7 @@ from ...core.pydantic_utilities import IS_PYDANTIC_V2
 
 class BatchConcurrencyError(UncheckedBaseModel):
     """
-    Returned with a 429 `concurrency_limit_reached` when a batch cannot start. On Scale and above, you already run as many batches as your plan's concurrency limit. Below Scale, every batch record runs as a generation, and the batch has more records than your plan has free generation slots. The response also carries a `Retry-After` header (seconds) and an `X-Sync-Concurrency-Limit` header, plus `X-Sync-Active-Generations` below Scale.
+    Returned with a 429 `concurrency_limit_reached` when you already run as many batches as your plan's batch concurrency limit. The response also carries a `Retry-After` header (seconds) and an `X-Sync-Concurrency-Limit` header.
     """
 
     status_code: typing_extensions.Annotated[float, FieldMetadata(alias="statusCode")] = pydantic.Field()
@@ -38,18 +38,11 @@ class BatchConcurrencyError(UncheckedBaseModel):
     The number of batches you currently have in progress.
     """
 
-    active_generations: typing_extensions.Annotated[
-        typing.Optional[float], FieldMetadata(alias="activeGenerations")
-    ] = pydantic.Field(default=None)
-    """
-    Below Scale only: generations in progress, batch records included. The batch can hold at most `concurrencyLimit` minus this many records.
-    """
-
     concurrency_limit: typing_extensions.Annotated[typing.Optional[float], FieldMetadata(alias="concurrencyLimit")] = (
         pydantic.Field(default=None)
     )
     """
-    Your plan's concurrency limit: concurrent batches on Scale and above, concurrent generations below Scale.
+    The maximum number of concurrent batches allowed on your plan.
     """
 
     retry_after_seconds: typing_extensions.Annotated[

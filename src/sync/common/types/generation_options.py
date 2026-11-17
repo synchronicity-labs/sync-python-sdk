@@ -14,7 +14,7 @@ from ...core.pydantic_utilities import IS_PYDANTIC_V2
 class GenerationOptions(UncheckedBaseModel):
     sync_mode: typing.Optional[SyncMode] = pydantic.Field(default=None)
     """
-    Defines how to handle duration mismatches between video and audio inputs. Ignored for image inputs (images have no intrinsic duration). See the [Sync Mode](/developer-guides/sync-mode) guide for the full behavior matrix.
+    Defines how to handle duration mismatches between video and audio inputs. Ignored for image inputs (images have no intrinsic duration). See the [Sync Mode](/docs/developer-guides/sync-mode) guide for the full behavior matrix.
     """
 
     model_mode: typing.Optional[ModelMode] = pydantic.Field(default=None)
@@ -29,7 +29,7 @@ class GenerationOptions(UncheckedBaseModel):
 
     prompt_image_uris: typing.Optional[typing.List[str]] = pydantic.Field(default=None)
     """
-    Reference image URLs for appearance editing generations.
+    Reference image URLs for appearance editing generations. At most 10.
     """
 
     i2v_prompt: typing.Optional[str] = pydantic.Field(default=None)
@@ -44,7 +44,7 @@ class GenerationOptions(UncheckedBaseModel):
 
     active_speaker_detection: typing.Optional[ActiveSpeaker] = pydantic.Field(default=None)
     """
-    Active speaker detection configuration. When enabled, automatically detects and applies lipsync only to the active speaker in videos with multiple people. Not supported for image inputs.
+    Active speaker detection configuration. If the whole field is omitted on a supported video dubbing request, Sync enables auto-detection. When this object is present, auto_detect defaults to false unless you set it to true. Not supported for image inputs.
     """
 
     occlusion_detection_enabled: typing.Optional[bool] = pydantic.Field(default=None)

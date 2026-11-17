@@ -25,7 +25,7 @@ class CreateDialogueEditDto(UncheckedBaseModel):
 
     edits: typing.List[DialogueEditOperation] = pydantic.Field()
     """
-    The edits to apply: change replaces one word (wordId, replacement), remove cuts a contiguous run of words (wordIds). Between 1 and 100 edits per job.
+    The edits to apply: change replaces one word (wordId, replacement, and an optional pronunciation), remove cuts a contiguous run of words (wordIds). Between 1 and 100 edits per job. More than 100 returns 400 with errorCode dialogue_edit_too_many_edits.
     """
 
     source_video_url: typing_extensions.Annotated[str, FieldMetadata(alias="sourceVideoUrl")] = pydantic.Field()
@@ -44,7 +44,7 @@ class CreateDialogueEditDto(UncheckedBaseModel):
         default=None
     )
     """
-    End of the edited window, in milliseconds from the start of the source. Omit to run to the end. The window cannot exceed 10 minutes. An API-key request must leave startMs and endMs unset to edit the whole video.
+    End of the edited window, in milliseconds from the start of the source. Omit to run to the end. The window cannot exceed 10 minutes. An API-key request must leave startMs and endMs unset to edit the whole video. With endMs omitted, a transcript that runs more than 10 minutes past startMs returns 422 with errorCode `SOURCE_TOO_LONG`.
     """
 
     voice_id: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="voiceId")] = pydantic.Field(

@@ -38,6 +38,7 @@ class DialogueEditsClient:
         transcript: Transcript,
         edits: typing.Sequence[DialogueEditOperation],
         source_video_url: str,
+        idempotency_key: typing.Optional[str] = None,
         start_ms: typing.Optional[int] = OMIT,
         end_ms: typing.Optional[int] = OMIT,
         voice_id: typing.Optional[str] = OMIT,
@@ -47,7 +48,8 @@ class DialogueEditsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> DialogueEditJob:
         """
-        Applies word-level edits to a transcript from `POST /v2/transcriptions` and synthesizes preview audio for the same window: only the edited spans are re-spoken in a voice cloned from the source, everything else stays the original recording. Poll `GET /v2/dialogue-edits/{id}` until `status` is `COMPLETED`, `COMPLETED_PARTIAL` or `FAILED`; a completed or partially completed job carries `previewAudioUrl`, the retimed `resultTranscript` and the edited regions as `resultSlots`. Edits that cannot be applied to the transcript are refused with a 400 before a job exists. An API-key request is admitted only for the whole video (leave startMs and endMs unset) and only when the organization's rollout enables segment lipsync and section expansion: a partial window is refused with errorCode `dialogue_edit_unsupported` (422), a rollout without both flags with `dialogue_edit_retime_required` (422), and a rollout that cannot be evaluated with `generation_infra_service_unavailable` (503; retry with backoff). Studio sessions may select a window. Normal billing, planning, duration and rate limits still apply.
+        Applies word-level edits to a transcript from `POST /v2/transcriptions` and synthesizes preview audio for the same window: only the edited spans are re-spoken in a voice cloned from the source, everything else stays the original recording. Poll `GET /v2/dialogue-edits/{id}` until `status` is `COMPLETED`, `COMPLETED_PARTIAL` or `FAILED`; a completed or partially completed job carries `previewAudioUrl`, the retimed `resultTranscript` and the edited regions as `resultSlots`. Edits that cannot be applied return 400 PLAN_FAILED. Requests with more than 100 edits return 400 dialogue_edit_too_many_edits. API-key requests must cover the whole video: omit startMs and endMs. A partial window returns 422 dialogue_edit_unsupported. A source longer than the 10-minute dialogue limit returns 422 SOURCE_TOO_LONG.
+        Send Idempotency-Key on the first request and reuse it with the same body on retries. A replay returns 200 with the original job's current state and Idempotency-Replayed: true. Reusing a key with different inputs returns 409 IDEMPOTENCY_KEY_CONFLICT. A malformed key returns 400 INVALID_IDEMPOTENCY_KEY. If the job cannot be queued, retry the 503 with the same key and body. Honor Retry-After when present.
 
         Parameters
         ----------
@@ -55,16 +57,19 @@ class DialogueEditsClient:
             The transcript the edits refer to, as returned by GET /v2/transcriptions/{id}. Edits name words by their id in this transcript. Word timings are in milliseconds from the start of the source video.
 
         edits : typing.Sequence[DialogueEditOperation]
-            The edits to apply: change replaces one word (wordId, replacement), remove cuts a contiguous run of words (wordIds). Between 1 and 100 edits per job.
+            The edits to apply: change replaces one word (wordId, replacement, and an optional pronunciation), remove cuts a contiguous run of words (wordIds). Between 1 and 100 edits per job. More than 100 returns 400 with errorCode dialogue_edit_too_many_edits.
 
         source_video_url : str
             URL of the source video the transcript was made from, hosted in sync. storage (upload it via POST /v2/assets/upload first).
+
+        idempotency_key : typing.Optional[str]
+            Case-sensitive organization-scoped key. Send one header with 1–128 characters from [A-Za-z0-9._~-]+. Reuse the same key and body for retries; use a new key for a new or revised edit.
 
         start_ms : typing.Optional[int]
             Start of the edited window, in milliseconds from the start of the source. Use the same window the transcript was made for. Defaults to 0. An API-key request must leave startMs and endMs unset; the edit then covers the whole video.
 
         end_ms : typing.Optional[int]
-            End of the edited window, in milliseconds from the start of the source. Omit to run to the end. The window cannot exceed 10 minutes. An API-key request must leave startMs and endMs unset to edit the whole video.
+            End of the edited window, in milliseconds from the start of the source. Omit to run to the end. The window cannot exceed 10 minutes. An API-key request must leave startMs and endMs unset to edit the whole video. With endMs omitted, a transcript that runs more than 10 minutes past startMs returns 422 with errorCode `SOURCE_TOO_LONG`.
 
         voice_id : typing.Optional[str]
             Opaque voice id returned as voiceId by an earlier dialogue-edit job of the same source. Reusing it skips cloning the voice again. Omit on the first job for a source. Ids your organization has not used before are ignored.
@@ -84,7 +89,7 @@ class DialogueEditsClient:
         Returns
         -------
         DialogueEditJob
-            Dialogue edit job created successfully
+            A new job returns 201. An equivalent keyed replay returns 200 with this response shape and Idempotency-Replayed true.
 
         Examples
         --------
@@ -141,6 +146,7 @@ class DialogueEditsClient:
             transcript=transcript,
             edits=edits,
             source_video_url=source_video_url,
+            idempotency_key=idempotency_key,
             start_ms=start_ms,
             end_ms=end_ms,
             voice_id=voice_id,
@@ -204,6 +210,7 @@ class AsyncDialogueEditsClient:
         transcript: Transcript,
         edits: typing.Sequence[DialogueEditOperation],
         source_video_url: str,
+        idempotency_key: typing.Optional[str] = None,
         start_ms: typing.Optional[int] = OMIT,
         end_ms: typing.Optional[int] = OMIT,
         voice_id: typing.Optional[str] = OMIT,
@@ -213,7 +220,8 @@ class AsyncDialogueEditsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> DialogueEditJob:
         """
-        Applies word-level edits to a transcript from `POST /v2/transcriptions` and synthesizes preview audio for the same window: only the edited spans are re-spoken in a voice cloned from the source, everything else stays the original recording. Poll `GET /v2/dialogue-edits/{id}` until `status` is `COMPLETED`, `COMPLETED_PARTIAL` or `FAILED`; a completed or partially completed job carries `previewAudioUrl`, the retimed `resultTranscript` and the edited regions as `resultSlots`. Edits that cannot be applied to the transcript are refused with a 400 before a job exists. An API-key request is admitted only for the whole video (leave startMs and endMs unset) and only when the organization's rollout enables segment lipsync and section expansion: a partial window is refused with errorCode `dialogue_edit_unsupported` (422), a rollout without both flags with `dialogue_edit_retime_required` (422), and a rollout that cannot be evaluated with `generation_infra_service_unavailable` (503; retry with backoff). Studio sessions may select a window. Normal billing, planning, duration and rate limits still apply.
+        Applies word-level edits to a transcript from `POST /v2/transcriptions` and synthesizes preview audio for the same window: only the edited spans are re-spoken in a voice cloned from the source, everything else stays the original recording. Poll `GET /v2/dialogue-edits/{id}` until `status` is `COMPLETED`, `COMPLETED_PARTIAL` or `FAILED`; a completed or partially completed job carries `previewAudioUrl`, the retimed `resultTranscript` and the edited regions as `resultSlots`. Edits that cannot be applied return 400 PLAN_FAILED. Requests with more than 100 edits return 400 dialogue_edit_too_many_edits. API-key requests must cover the whole video: omit startMs and endMs. A partial window returns 422 dialogue_edit_unsupported. A source longer than the 10-minute dialogue limit returns 422 SOURCE_TOO_LONG.
+        Send Idempotency-Key on the first request and reuse it with the same body on retries. A replay returns 200 with the original job's current state and Idempotency-Replayed: true. Reusing a key with different inputs returns 409 IDEMPOTENCY_KEY_CONFLICT. A malformed key returns 400 INVALID_IDEMPOTENCY_KEY. If the job cannot be queued, retry the 503 with the same key and body. Honor Retry-After when present.
 
         Parameters
         ----------
@@ -221,16 +229,19 @@ class AsyncDialogueEditsClient:
             The transcript the edits refer to, as returned by GET /v2/transcriptions/{id}. Edits name words by their id in this transcript. Word timings are in milliseconds from the start of the source video.
 
         edits : typing.Sequence[DialogueEditOperation]
-            The edits to apply: change replaces one word (wordId, replacement), remove cuts a contiguous run of words (wordIds). Between 1 and 100 edits per job.
+            The edits to apply: change replaces one word (wordId, replacement, and an optional pronunciation), remove cuts a contiguous run of words (wordIds). Between 1 and 100 edits per job. More than 100 returns 400 with errorCode dialogue_edit_too_many_edits.
 
         source_video_url : str
             URL of the source video the transcript was made from, hosted in sync. storage (upload it via POST /v2/assets/upload first).
+
+        idempotency_key : typing.Optional[str]
+            Case-sensitive organization-scoped key. Send one header with 1–128 characters from [A-Za-z0-9._~-]+. Reuse the same key and body for retries; use a new key for a new or revised edit.
 
         start_ms : typing.Optional[int]
             Start of the edited window, in milliseconds from the start of the source. Use the same window the transcript was made for. Defaults to 0. An API-key request must leave startMs and endMs unset; the edit then covers the whole video.
 
         end_ms : typing.Optional[int]
-            End of the edited window, in milliseconds from the start of the source. Omit to run to the end. The window cannot exceed 10 minutes. An API-key request must leave startMs and endMs unset to edit the whole video.
+            End of the edited window, in milliseconds from the start of the source. Omit to run to the end. The window cannot exceed 10 minutes. An API-key request must leave startMs and endMs unset to edit the whole video. With endMs omitted, a transcript that runs more than 10 minutes past startMs returns 422 with errorCode `SOURCE_TOO_LONG`.
 
         voice_id : typing.Optional[str]
             Opaque voice id returned as voiceId by an earlier dialogue-edit job of the same source. Reusing it skips cloning the voice again. Omit on the first job for a source. Ids your organization has not used before are ignored.
@@ -250,7 +261,7 @@ class AsyncDialogueEditsClient:
         Returns
         -------
         DialogueEditJob
-            Dialogue edit job created successfully
+            A new job returns 201. An equivalent keyed replay returns 200 with this response shape and Idempotency-Replayed true.
 
         Examples
         --------
@@ -315,6 +326,7 @@ class AsyncDialogueEditsClient:
             transcript=transcript,
             edits=edits,
             source_video_url=source_video_url,
+            idempotency_key=idempotency_key,
             start_ms=start_ms,
             end_ms=end_ms,
             voice_id=voice_id,

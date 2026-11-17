@@ -11,6 +11,7 @@ from ...common.types.model import Model
 import typing
 from ...common.types.input import Input
 from ...common.types.generation_options import GenerationOptions
+from ...common.types.asset_id import AssetId
 from ...core.pydantic_utilities import IS_PYDANTIC_V2
 
 
@@ -51,6 +52,20 @@ class GenerationNotification(UncheckedBaseModel):
     url of the generated output media. Null unless the generation completed.
     """
 
+    dub_audio_url: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="dubAudioUrl")] = (
+        pydantic.Field(default=None)
+    )
+    """
+    Dubbed audio URL. Omitted without dubParams; null until the dubbed track is available.
+    """
+
+    dub_audio_asset_id: typing_extensions.Annotated[
+        typing.Optional[AssetId], FieldMetadata(alias="dubAudioAssetId")
+    ] = pydantic.Field(default=None)
+    """
+    Reusable AUDIO asset for the dubbed track. Omitted without dubParams; null until available or when retention settings or a custom output bucket prevent saving it.
+    """
+
     synthesized_audio_url: typing_extensions.Annotated[
         typing.Optional[str], FieldMetadata(alias="synthesizedAudioUrl")
     ] = pydantic.Field(default=None)
@@ -60,14 +75,14 @@ class GenerationNotification(UncheckedBaseModel):
 
     error: typing.Optional[str] = pydantic.Field(default=None)
     """
-    Human-readable error message if the generation failed or was rejected, otherwise null.
+    Human-readable error message if the generation failed, was rejected or lip-synced nothing (NO_OP), otherwise null.
     """
 
     error_code: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="errorCode")] = pydantic.Field(
         default=None
     )
     """
-    Machine-readable error code if the generation failed or was rejected, otherwise null. See [Error Handling](/developer-guides/error-handling) and GET /v2/errors.
+    Machine-readable error code if the generation failed, was rejected or lip-synced nothing (NO_OP), otherwise null. See [Error Handling](/docs/developer-guides/error-handling) and GET /v2/errors.
     """
 
     if IS_PYDANTIC_V2:

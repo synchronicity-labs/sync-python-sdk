@@ -7,6 +7,8 @@ DialogueEditErrorCode = typing.Union[
         "EXTRACTION_FAILED",
         "VOICE_CLONE_FAILED",
         "VOICE_SAMPLE_TOO_SHORT",
+        "VOICE_BLOCKED",
+        "VOICE_VERIFICATION_REQUIRED",
         "SYNTHESIS_FAILED",
         "EDIT_TOO_LONG",
         "SOURCE_TOO_LONG",

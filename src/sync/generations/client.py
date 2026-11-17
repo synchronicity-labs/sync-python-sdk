@@ -3,6 +3,15 @@
 import typing
 from ..core.client_wrapper import SyncClientWrapper
 from .raw_client import RawGenerationsClient
+from ..common.types.generation_status import GenerationStatus
+from ..common.types.generation_count_type import GenerationCountType
+from ..common.types.generation_source import GenerationSource
+from ..core.request_options import RequestOptions
+from ..common.types.generation_count import GenerationCount
+from ..common.types.generation_id import GenerationId
+from ..generation_costs.types.generation_costs import GenerationCosts
+import datetime as dt
+from ..generation_costs.types.generation_costs_list import GenerationCostsList
 from ..common.types.model import Model
 from ..common.types.input import Input
 from ..common.types.generation_options import GenerationOptions
@@ -11,11 +20,8 @@ from ..common.types.output_audio import OutputAudio
 from ..common.types.dub_dto import DubDto
 from ..common.types.project_id import ProjectId
 from ..common.types.dialogue_edit_reference import DialogueEditReference
-from ..core.request_options import RequestOptions
 from ..common.types.generation import Generation
 from .. import core
-from ..common.types.generation_id import GenerationId
-from ..common.types.generation_status import GenerationStatus
 from ..common.types.estimate_workflow import EstimateWorkflow
 from ..common.types.estimated_generation_cost import EstimatedGenerationCost
 from ..common.types.project_generation import ProjectGeneration
@@ -41,6 +47,150 @@ class GenerationsClient:
         """
         return self._raw_client
 
+    def count(
+        self,
+        *,
+        status: typing.Optional[typing.Sequence[GenerationStatus]] = None,
+        type: typing.Optional[GenerationCountType] = None,
+        source: typing.Optional[typing.Sequence[str]] = None,
+        generation_source: typing.Optional[GenerationSource] = None,
+        current_user_only: typing.Optional[bool] = None,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> GenerationCount:
+        """
+        Count generations visible to your credentials. All provided filters are combined.
+
+        Parameters
+        ----------
+        status : typing.Optional[typing.Sequence[GenerationStatus]]
+            Filter by status, as a comma-separated list or repeated values.
+
+        type : typing.Optional[GenerationCountType]
+            Filter by Studio (playground) or API generations.
+
+        source : typing.Optional[typing.Sequence[str]]
+            Filter by source label, as a comma-separated list or repeated values.
+
+        generation_source : typing.Optional[GenerationSource]
+            Filter by product surface. Older generations without a recorded surface are excluded when this filter is set.
+
+        current_user_only : typing.Optional[bool]
+            Count only generations owned by the current user. Defaults to false.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        GenerationCount
+
+        Examples
+        --------
+        from sync import Sync
+
+        client = Sync(
+            api_key="YOUR_API_KEY",
+        )
+        client.generations.count()
+        """
+        response = self._raw_client.count(
+            status=status,
+            type=type,
+            source=source,
+            generation_source=generation_source,
+            current_user_only=current_user_only,
+            request_options=request_options,
+        )
+        return response.data
+
+    def get_costs(
+        self, id: GenerationId, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> GenerationCosts:
+        """
+        Read the recorded costs for a generation. Credit amounts are USD face value, not cash paid. Metered amounts exclude invoice adjustments and tax. A null total means one or more components are pending or unavailable. This endpoint does not estimate prices or change billing.
+
+        Parameters
+        ----------
+        id : GenerationId
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        GenerationCosts
+
+        Examples
+        --------
+        from sync import Sync
+
+        client = Sync(
+            api_key="YOUR_API_KEY",
+        )
+        client.generations.get_costs(
+            id="id",
+        )
+        """
+        response = self._raw_client.get_costs(id, request_options=request_options)
+        return response.data
+
+    def list_costs(
+        self,
+        *,
+        start_time: dt.datetime,
+        end_time: dt.datetime,
+        limit: typing.Optional[int] = None,
+        cursor: typing.Optional[str] = None,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> GenerationCostsList:
+        """
+        List the recorded costs of every generation that finished in a time range, for loading usage and spend in bulk. Each item is the same cost object as Get Generation Costs, plus `createdAt`, `finishedAt`, `model` and `apiKey`. The range filters on `finishedAt`, with `startTime` inclusive and `endTime` exclusive, and items are ordered oldest first, so back-to-back ranges such as one per UTC day neither overlap nor skip. Page with `cursor` until `nextCursor` is null, keeping the same `startTime` and `endTime`; changing the range between pages can skip items. Costs are normally recorded within about 10 minutes of completion. A null total means one or more components are pending or unavailable; `availability` is `pending`, `partial` or `unavailable`, and `partial` or `unavailable` items may not change. If recorded usage can't be read, the whole page fails with 503 `usage_dependency_unavailable` and no partial page is returned; retry the same request. See [Export usage and costs](/docs/api-reference/guides/usage-export).
+
+        Parameters
+        ----------
+        start_time : dt.datetime
+            Start of the range, inclusive. UTC ISO 8601 date-time, such as 2026-11-12T00:00:00Z.
+
+        end_time : dt.datetime
+            End of the range, exclusive. UTC ISO 8601 date-time. Must be after startTime.
+
+        limit : typing.Optional[int]
+            Items per page, 1 to 500. Defaults to 100.
+
+        cursor : typing.Optional[str]
+            The nextCursor from the previous page. Send it with the same startTime and endTime.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        GenerationCostsList
+
+        Examples
+        --------
+        import datetime
+
+        from sync import Sync
+
+        client = Sync(
+            api_key="YOUR_API_KEY",
+        )
+        client.generations.list_costs(
+            start_time=datetime.datetime.fromisoformat(
+                "2026-11-12 00:00:00+00:00",
+            ),
+            end_time=datetime.datetime.fromisoformat(
+                "2026-11-13 00:00:00+00:00",
+            ),
+            limit=500,
+        )
+        """
+        response = self._raw_client.list_costs(
+            start_time=start_time, end_time=end_time, limit=limit, cursor=cursor, request_options=request_options
+        )
+        return response.data
+
     def create(
         self,
         *,
@@ -58,7 +208,7 @@ class GenerationsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> Generation:
         """
-        Create a lip sync generation with `application/json` — provide each input by `url` or by `assetId` from an uploaded asset. For reusable or large local files, upload them first with POST /v2/assets/upload and pass the returned `assetId`; see [Asset Uploads](/developer-guides/asset-uploads). Use the multipart "Create Generation with Files" form only when uploading direct audio, video, or image file fields; it has a 5 GiB per-file application parser limit, subject to your plan and any lower proxy limits. Nested fields such as input, options, segments, outputAudio, dubParams, and dialogueEdit must be JSON strings in multipart requests. If a `text` input requires speech synthesis and the ElevenLabs provider is temporarily unavailable, the request returns errorCode elevenlabs_service_unavailable: 504 for provider timeouts and 503 for other provider outages for unkeyed requests. Keyed uncertain outcomes return 503 IDEMPOTENCY_OUTCOME_UNKNOWN instead. An API-key request that passes dialogueEdit is refused with errorCode dialogue_edit_retime_required (422) when the organization's rollout lacks segment lipsync and section expansion. A dialogueEdit that removes more speech than the surrounding footage can absorb returns errorCode dialogue_edit_removal_too_large (422). When the failing section can be identified, `dialogueEditSection` on the error names it; change it and create a new preview before submitting again. Retrying the same preview fails again. Send the optional Idempotency-Key header on the first request and reuse it with the same payload on retries. An accepted replay returns 200 with the original generation's current state and Idempotency-Replayed: true. A retry after that generation ended FAILED or REJECTED starts a new generation instead (201). An API-key request without the header that is identical to one your organization sent in the last 60 seconds returns 409 DUPLICATE_SUBMISSION with the original generationId; send a unique Idempotency-Key with each generation you intend. See [Idempotent Requests](/api-reference/guides/idempotency) for key validation, conflicts, retention, duplicates, and uncertain-outcome recovery.
+        Create a lip sync generation with `application/json` — provide each input by `url` or by `assetId` from an uploaded asset. For reusable or large local files, upload them first with POST /v2/assets/upload and pass the returned `assetId`; see [Asset Uploads](/docs/developer-guides/asset-uploads). Use the multipart "Create Generation with Files" form only when uploading direct audio, video, or image file fields; it has a 5 GiB per-file application parser limit, subject to your plan and any lower proxy limits. Nested fields such as input, options, segments, outputAudio, dubParams, and dialogueEdit must be JSON strings in multipart requests. If a `text` input requires speech synthesis and the ElevenLabs provider is temporarily unavailable, the request returns errorCode elevenlabs_service_unavailable: 504 for provider timeouts and 503 for other provider outages for unkeyed requests. Keyed uncertain outcomes return 503 IDEMPOTENCY_OUTCOME_UNKNOWN instead. An older dialogueEdit preview without segment lipsync and section expansion returns dialogue_edit_retime_required (422). Create a new preview from the same transcript and edits. A dialogueEdit that removes more speech than the surrounding footage can absorb returns errorCode dialogue_edit_removal_too_large (422). When the failing section can be identified, `dialogueEditSection` on the error names it; change it and create a new preview before submitting again. Retrying the same preview fails again. A video input `url` that links to a single TikTok, Instagram, Facebook, or YouTube video is imported first: the generation is created PENDING and starts once the video is downloaded, or ends FAILED with errorCode import_failed if the import fails. A linked audio input, or a linked video in a segments or dubbing request, returns 409 import_in_progress until its import finishes; send the same request (with the same Idempotency-Key, if any) again after Retry-After. Link imports can also return 403 import_not_enabled, 422 import_failed, 429 import_daily_limit_reached or concurrency_limit_reached, and 503 import_unavailable. See [Asset Uploads](/docs/developer-guides/asset-uploads#import-a-social-video-link). Send the optional Idempotency-Key header on the first request and reuse it with the same payload on retries. An accepted replay returns 200 with the original generation's current state and Idempotency-Replayed: true. A retry after that generation ended FAILED or REJECTED starts a new generation instead (201). An API-key request without the header that is identical to one your organization sent in the last 60 seconds returns 409 DUPLICATE_SUBMISSION with the original generationId; send a unique Idempotency-Key with each generation you intend. See [Idempotent Requests](/docs/api-reference/guides/idempotency) for key validation, conflicts, retention, duplicates, and uncertain-outcome recovery.
 
         Parameters
         ----------
@@ -66,7 +216,7 @@ class GenerationsClient:
             name of the model to use for generation.
 
         input : typing.Sequence[Input]
-            Normal lipsync requests must include exactly one visual input (video or image) and one audio or text input. Dubbed lipsync requests using dubParams must include exactly one video input and no audio or text input, because Sync extracts the dubbing source audio from that video. Image inputs are only supported with the sync-3 model. When using segments, audio or text inputs can carry unique refId values.
+            Normal lipsync requests must include exactly one visual input (video or image) and one audio or text input. Dubbed lipsync requests using dubParams must include exactly one video input and no audio or text input, because Sync extracts the dubbing source audio from that video. Image inputs are only supported with the sync-3 model. When using segments, audio or text inputs can carry unique refId values. At most 102 inputs.
 
         idempotency_key : typing.Optional[str]
             Case-sensitive organization-scoped key, 1–128 characters matching [A-Za-z0-9._~-]+. Send exactly one header. Reuse the same key and payload for retries of one action; a retry after the generation ended FAILED or REJECTED starts a new one. Use a unique key per intended generation. Retained seven days from acceptance, longer while active or unresolved. Not a JSON field.
@@ -75,7 +225,7 @@ class GenerationsClient:
             additional options available for generation.
 
         segments : typing.Optional[typing.Sequence[GenerationSegment]]
-            segments definition list. When provided, allows defining one or more video segments with different audio inputs for each segment. Each segment specifies a time range and references an audio input by refId.
+            segments definition list. When provided, allows defining one or more video segments with different audio inputs for each segment. Each segment specifies a time range and references an audio input by refId. At most 100 segments.
 
         output_audio : typing.Optional[OutputAudio]
             One audio input that plays over the whole finished output from its first second, replacing the sound of every part, lipsynced or not. Use it with segments, for example one dubbed track for a whole video where some segments set lipsync to false. When any segment sets lipsync to false and this is omitted, the only audio input is used. Not available with a custom output bucket, zero data retention or a retention override.
@@ -93,7 +243,7 @@ class GenerationsClient:
             Optionally attach this generation to a project (created via POST /v2/projects) so it appears in Studio under that project. Must reference a project in your organization — otherwise the request is rejected with 422.
 
         dialogue_edit : typing.Optional[DialogueEditReference]
-            Use the id of a completed dialogue edit from POST /v2/dialogue-edits to supply the audio and edited regions. Requires a preview that ran segment lipsync and section expansion (see the job's segmentLipsyncEnabled and sectionExpansionEnabled). Send exactly one video input, the same video the dialogue edit was made from, and no audio input, segments or dubParams. Billing, status, wait and webhooks work as for any generation.
+            Use the id of a completed dialogue edit from POST /v2/dialogue-edits to supply the audio and edited regions. Requires a preview that ran segment lipsync and section expansion (see the job's segmentLipsyncEnabled and sectionExpansionEnabled). Send exactly one video input, the same video the dialogue edit was made from, and no audio input, segments or dubParams. Billing, status, wait and webhooks work as for any generation. Also accepted in batch rows for organizations with dialogue-edit batches enabled.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -158,7 +308,7 @@ class GenerationsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> Generation:
         """
-        The multipart/form-data form of `POST /v2/generate` — the same endpoint as "Create Generation", for uploading local files directly instead of passing URLs. Send each file under a field named for its type (`video`, `image`, `audio`), at most one of each. The application parser allows up to 5 GiB (5 × 1024³ bytes) per file, 3 files, 32 fields, 35 total parts, and 1 MiB per field. A file over the parser limit returns 413 generation_input_validation_failed, and a file over your plan limit returns 422 file_size_exceeds_plan_limit. Proxy limits may be lower; this ceiling does not guarantee a 5 GiB direct transfer. Each file is saved as an asset in your organization and passed to the generation by `assetId`. For large files, upload via POST /v2/assets/upload first and pass the `assetId`, so retries don't resend the file. Nested fields such as `input`, `options`, `segments`, `outputAudio`, `dubParams`, and `dialogueEdit` must be sent as JSON strings in multipart requests. Image inputs are sync-3 only. If a `text` input requires speech synthesis and the ElevenLabs provider is temporarily unavailable, the request returns errorCode elevenlabs_service_unavailable: 504 for provider timeouts and 503 for other provider outages for unkeyed requests. Keyed uncertain outcomes return 503 IDEMPOTENCY_OUTCOME_UNKNOWN instead. An API-key request that passes dialogueEdit is refused with errorCode dialogue_edit_retime_required (422) when the organization's rollout lacks segment lipsync and section expansion. A dialogueEdit that removes more speech than the surrounding footage can absorb returns errorCode dialogue_edit_removal_too_large (422). When the failing section can be identified, `dialogueEditSection` on the error names it; change it and create a new preview before submitting again. Retrying the same preview fails again. Send the optional Idempotency-Key header on the first request and reuse it with the same payload on retries. An accepted replay returns 200 with the original generation's current state and Idempotency-Replayed: true. A retry after that generation ended FAILED or REJECTED starts a new generation instead (201). An API-key request without the header that is identical to one your organization sent in the last 60 seconds returns 409 DUPLICATE_SUBMISSION with the original generationId; send a unique Idempotency-Key with each generation you intend. See [Idempotent Requests](/api-reference/guides/idempotency) for key validation, conflicts, retention, duplicates, and uncertain-outcome recovery.
+        The multipart/form-data form of `POST /v2/generate` — the same endpoint as "Create Generation", for uploading local files directly instead of passing URLs. Send each file under a field named for its type (`video`, `image`, `audio`), at most one of each. The application parser allows up to 5 GiB (5 × 1024³ bytes) per file, 3 files, 32 fields, 35 total parts, and 1 MiB per field. A file over the parser limit returns 413 generation_input_validation_failed, and a file over your plan limit returns 422 file_size_exceeds_plan_limit. A malformed or truncated multipart body, an unsupported file field, or too many fields or parts returns 400 generation_input_validation_failed. Let your HTTP client build the multipart boundaries and send only the documented fields. Proxy limits may be lower; this ceiling does not guarantee a 5 GiB direct transfer. Each file is saved as an asset in your organization and passed to the generation by `assetId`. For large files, upload via POST /v2/assets/upload first and pass the `assetId`, so retries don't resend the file. Nested fields such as `input`, `options`, `segments`, `outputAudio`, `dubParams`, and `dialogueEdit` must be sent as JSON strings in multipart requests. Image inputs are sync-3 only. If a `text` input requires speech synthesis and the ElevenLabs provider is temporarily unavailable, the request returns errorCode elevenlabs_service_unavailable: 504 for provider timeouts and 503 for other provider outages for unkeyed requests. Keyed uncertain outcomes return 503 IDEMPOTENCY_OUTCOME_UNKNOWN instead. An older dialogueEdit preview without segment lipsync and section expansion returns dialogue_edit_retime_required (422). Create a new preview from the same transcript and edits. A dialogueEdit that removes more speech than the surrounding footage can absorb returns errorCode dialogue_edit_removal_too_large (422). When the failing section can be identified, `dialogueEditSection` on the error names it; change it and create a new preview before submitting again. Retrying the same preview fails again. Send the optional Idempotency-Key header on the first request and reuse it with the same payload on retries. An accepted replay returns 200 with the original generation's current state and Idempotency-Replayed: true. A retry after that generation ended FAILED or REJECTED starts a new generation instead (201). An API-key request without the header that is identical to one your organization sent in the last 60 seconds returns 409 DUPLICATE_SUBMISSION with the original generationId; send a unique Idempotency-Key with each generation you intend. See [Idempotent Requests](/docs/api-reference/guides/idempotency) for key validation, conflicts, retention, duplicates, and uncertain-outcome recovery.
 
         Parameters
         ----------
@@ -180,7 +330,7 @@ class GenerationsClient:
             Optional generation options, encoded as a JSON string in multipart requests.
 
         segments : typing.Optional[typing.List[GenerationSegment]]
-            Optional segment definitions, encoded as a JSON string in multipart requests.
+            Optional segment definitions, encoded as a JSON string in multipart requests. Each audioInput.refId must name an audio or text input sent in input by url, assetId, or text. An uploaded audio file has no refId, so segments can't reference it.
 
         output_audio : typing.Optional[OutputAudio]
             Optional audio input that plays over the whole finished output, encoded as a JSON string in multipart requests, for example `{"refId":"dub"}`. Use with segments. The refId must name an audio input sent by url or assetId: an uploaded audio file has no refId.
@@ -252,13 +402,13 @@ class GenerationsClient:
         id : GenerationId
 
         wait : typing.Optional[bool]
-            When true, long-poll: hold the request open until the generation reaches a terminal status (COMPLETED/FAILED/REJECTED) or the timeout elapses, then return the latest state. Waits are short (10s max) — treat this as a convenience for jobs about to finish, and poll again (the response includes a `Retry-After: 2` header) or use a webhook for longer jobs. wait=true responses also carry `X-Sync-Wait-Mode: long_poll` and `X-Sync-Wait-Timeout-Seconds` headers. Cannot be combined with include=progress.
+            When true, long-poll: hold the request open until the generation reaches a terminal status (COMPLETED/NO_OP/FAILED/REJECTED) or the timeout elapses, then return the latest state. Waits are short (10s max) — treat this as a convenience for jobs about to finish, and poll again (the response includes a `Retry-After: 2` header) or use a webhook for longer jobs. wait=true responses also carry `X-Sync-Wait-Mode: long_poll` and `X-Sync-Wait-Timeout-Seconds` headers. Cannot be combined with include=progress.
 
         timeout : typing.Optional[float]
             Max seconds to hold a wait=true request open (default 5, max 10 — values outside 1-10 are rejected with a 400). On timeout the current (non-terminal) generation is returned with HTTP 200, so check `status` and poll again, or use a webhook for long jobs.
 
         include : typing.Optional[str]
-            Comma-separated extra fields to include. include=progress adds a progress_percent field (fetched live from the inference service).
+            Comma-separated extra fields to include. include=progress adds a `progress` object with the render stage, measured progress and the expected finish time. Works for generations created through the API as well as in sync's own apps.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -315,18 +465,12 @@ class GenerationsClient:
         as v2 Creator and v3 Starter or higher) receive the clean output when
         available. Historical outputs can have the watermark burned in, so an
         upgrade does not guarantee every old output becomes watermark-free.
-        Outputs created without a watermark can remain clean after a downgrade.
-        If no watermarked derivative exists, the resolver retains its existing
-        fallback to the original output; changing plans does not rewrite files.
+        Changing plans does not rewrite historical files.
         This endpoint does not generate a new render or remove burned-in watermarks.
         
-        Signed S3 URLs request seven-day validity, but credential expiry,
-        revocation, access changes, or file deletion can make them unusable
-        sooner. Request this endpoint again for a fresh signed URL while the
-        output is still available. The selected S3 file is checked before
-        signing; a successful response does not guarantee future availability.
-        Older URL-only records return their stored URL unchanged, without
-        checking its availability or extending its original expiration.
+        Signed URLs can expire or become unavailable before their nominal
+        validity. Request this endpoint again for a fresh URL while the output
+        is still available.
         These URLs are download credentials: keep them private.
         
         Errors use the standard JSON error body and stable `errorCode`:
@@ -339,7 +483,7 @@ class GenerationsClient:
         | 404 | `generation_output_unavailable` | No eligible output reference or the selected file is missing; contact support. |
         | 409 | `generation_not_ready` | Pending or processing; poll Get Generation until COMPLETED. |
         | 422 | `generation_not_downloadable` | Failed or rejected; inspect the generation error. |
-        | 503 | `generation_download_unavailable` | Storage lookup or signing failed; retry with backoff. |
+        | 503 | `generation_download_unavailable` | The download URL could not be prepared; retry with backoff. |
         
         Authentication also returns 422 for draft organizations. Requesting a
         download URL does not create a project, incur a generation charge, or
@@ -391,6 +535,8 @@ class GenerationsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> typing.List[Generation]:
         """
+        list sync. labs generations and filter jobs by status or generation id. review authentication, request parameters, response objects, and api errors.
+
         Parameters
         ----------
         status : typing.Optional[typing.Sequence[GenerationStatus]]
@@ -461,7 +607,7 @@ class GenerationsClient:
             Finite, positive billable duration in seconds.
 
         fps : typing.Optional[float]
-            Source video frame rate. When omitted, credit-billed organizations are quoted at 25, the rate generation admission holds credits at when the source frame rate cannot be read; other organizations at 30.
+            Finite, positive source video frame rate. For standard plans, defaults to 25 for credit billing and 30 for usage billing when omitted.
 
         workflow : typing.Optional[EstimateWorkflow]
             Omit for lip-sync only. `translate-and-dub` includes dubbing and lip-sync, estimated using the source duration. Actual output duration may differ.
@@ -545,6 +691,173 @@ class AsyncGenerationsClient:
         """
         return self._raw_client
 
+    async def count(
+        self,
+        *,
+        status: typing.Optional[typing.Sequence[GenerationStatus]] = None,
+        type: typing.Optional[GenerationCountType] = None,
+        source: typing.Optional[typing.Sequence[str]] = None,
+        generation_source: typing.Optional[GenerationSource] = None,
+        current_user_only: typing.Optional[bool] = None,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> GenerationCount:
+        """
+        Count generations visible to your credentials. All provided filters are combined.
+
+        Parameters
+        ----------
+        status : typing.Optional[typing.Sequence[GenerationStatus]]
+            Filter by status, as a comma-separated list or repeated values.
+
+        type : typing.Optional[GenerationCountType]
+            Filter by Studio (playground) or API generations.
+
+        source : typing.Optional[typing.Sequence[str]]
+            Filter by source label, as a comma-separated list or repeated values.
+
+        generation_source : typing.Optional[GenerationSource]
+            Filter by product surface. Older generations without a recorded surface are excluded when this filter is set.
+
+        current_user_only : typing.Optional[bool]
+            Count only generations owned by the current user. Defaults to false.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        GenerationCount
+
+        Examples
+        --------
+        import asyncio
+
+        from sync import AsyncSync
+
+        client = AsyncSync(
+            api_key="YOUR_API_KEY",
+        )
+
+
+        async def main() -> None:
+            await client.generations.count()
+
+
+        asyncio.run(main())
+        """
+        response = await self._raw_client.count(
+            status=status,
+            type=type,
+            source=source,
+            generation_source=generation_source,
+            current_user_only=current_user_only,
+            request_options=request_options,
+        )
+        return response.data
+
+    async def get_costs(
+        self, id: GenerationId, *, request_options: typing.Optional[RequestOptions] = None
+    ) -> GenerationCosts:
+        """
+        Read the recorded costs for a generation. Credit amounts are USD face value, not cash paid. Metered amounts exclude invoice adjustments and tax. A null total means one or more components are pending or unavailable. This endpoint does not estimate prices or change billing.
+
+        Parameters
+        ----------
+        id : GenerationId
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        GenerationCosts
+
+        Examples
+        --------
+        import asyncio
+
+        from sync import AsyncSync
+
+        client = AsyncSync(
+            api_key="YOUR_API_KEY",
+        )
+
+
+        async def main() -> None:
+            await client.generations.get_costs(
+                id="id",
+            )
+
+
+        asyncio.run(main())
+        """
+        response = await self._raw_client.get_costs(id, request_options=request_options)
+        return response.data
+
+    async def list_costs(
+        self,
+        *,
+        start_time: dt.datetime,
+        end_time: dt.datetime,
+        limit: typing.Optional[int] = None,
+        cursor: typing.Optional[str] = None,
+        request_options: typing.Optional[RequestOptions] = None,
+    ) -> GenerationCostsList:
+        """
+        List the recorded costs of every generation that finished in a time range, for loading usage and spend in bulk. Each item is the same cost object as Get Generation Costs, plus `createdAt`, `finishedAt`, `model` and `apiKey`. The range filters on `finishedAt`, with `startTime` inclusive and `endTime` exclusive, and items are ordered oldest first, so back-to-back ranges such as one per UTC day neither overlap nor skip. Page with `cursor` until `nextCursor` is null, keeping the same `startTime` and `endTime`; changing the range between pages can skip items. Costs are normally recorded within about 10 minutes of completion. A null total means one or more components are pending or unavailable; `availability` is `pending`, `partial` or `unavailable`, and `partial` or `unavailable` items may not change. If recorded usage can't be read, the whole page fails with 503 `usage_dependency_unavailable` and no partial page is returned; retry the same request. See [Export usage and costs](/docs/api-reference/guides/usage-export).
+
+        Parameters
+        ----------
+        start_time : dt.datetime
+            Start of the range, inclusive. UTC ISO 8601 date-time, such as 2026-11-12T00:00:00Z.
+
+        end_time : dt.datetime
+            End of the range, exclusive. UTC ISO 8601 date-time. Must be after startTime.
+
+        limit : typing.Optional[int]
+            Items per page, 1 to 500. Defaults to 100.
+
+        cursor : typing.Optional[str]
+            The nextCursor from the previous page. Send it with the same startTime and endTime.
+
+        request_options : typing.Optional[RequestOptions]
+            Request-specific configuration.
+
+        Returns
+        -------
+        GenerationCostsList
+
+        Examples
+        --------
+        import asyncio
+        import datetime
+
+        from sync import AsyncSync
+
+        client = AsyncSync(
+            api_key="YOUR_API_KEY",
+        )
+
+
+        async def main() -> None:
+            await client.generations.list_costs(
+                start_time=datetime.datetime.fromisoformat(
+                    "2026-11-12 00:00:00+00:00",
+                ),
+                end_time=datetime.datetime.fromisoformat(
+                    "2026-11-13 00:00:00+00:00",
+                ),
+                limit=500,
+            )
+
+
+        asyncio.run(main())
+        """
+        response = await self._raw_client.list_costs(
+            start_time=start_time, end_time=end_time, limit=limit, cursor=cursor, request_options=request_options
+        )
+        return response.data
+
     async def create(
         self,
         *,
@@ -562,7 +875,7 @@ class AsyncGenerationsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> Generation:
         """
-        Create a lip sync generation with `application/json` — provide each input by `url` or by `assetId` from an uploaded asset. For reusable or large local files, upload them first with POST /v2/assets/upload and pass the returned `assetId`; see [Asset Uploads](/developer-guides/asset-uploads). Use the multipart "Create Generation with Files" form only when uploading direct audio, video, or image file fields; it has a 5 GiB per-file application parser limit, subject to your plan and any lower proxy limits. Nested fields such as input, options, segments, outputAudio, dubParams, and dialogueEdit must be JSON strings in multipart requests. If a `text` input requires speech synthesis and the ElevenLabs provider is temporarily unavailable, the request returns errorCode elevenlabs_service_unavailable: 504 for provider timeouts and 503 for other provider outages for unkeyed requests. Keyed uncertain outcomes return 503 IDEMPOTENCY_OUTCOME_UNKNOWN instead. An API-key request that passes dialogueEdit is refused with errorCode dialogue_edit_retime_required (422) when the organization's rollout lacks segment lipsync and section expansion. A dialogueEdit that removes more speech than the surrounding footage can absorb returns errorCode dialogue_edit_removal_too_large (422). When the failing section can be identified, `dialogueEditSection` on the error names it; change it and create a new preview before submitting again. Retrying the same preview fails again. Send the optional Idempotency-Key header on the first request and reuse it with the same payload on retries. An accepted replay returns 200 with the original generation's current state and Idempotency-Replayed: true. A retry after that generation ended FAILED or REJECTED starts a new generation instead (201). An API-key request without the header that is identical to one your organization sent in the last 60 seconds returns 409 DUPLICATE_SUBMISSION with the original generationId; send a unique Idempotency-Key with each generation you intend. See [Idempotent Requests](/api-reference/guides/idempotency) for key validation, conflicts, retention, duplicates, and uncertain-outcome recovery.
+        Create a lip sync generation with `application/json` — provide each input by `url` or by `assetId` from an uploaded asset. For reusable or large local files, upload them first with POST /v2/assets/upload and pass the returned `assetId`; see [Asset Uploads](/docs/developer-guides/asset-uploads). Use the multipart "Create Generation with Files" form only when uploading direct audio, video, or image file fields; it has a 5 GiB per-file application parser limit, subject to your plan and any lower proxy limits. Nested fields such as input, options, segments, outputAudio, dubParams, and dialogueEdit must be JSON strings in multipart requests. If a `text` input requires speech synthesis and the ElevenLabs provider is temporarily unavailable, the request returns errorCode elevenlabs_service_unavailable: 504 for provider timeouts and 503 for other provider outages for unkeyed requests. Keyed uncertain outcomes return 503 IDEMPOTENCY_OUTCOME_UNKNOWN instead. An older dialogueEdit preview without segment lipsync and section expansion returns dialogue_edit_retime_required (422). Create a new preview from the same transcript and edits. A dialogueEdit that removes more speech than the surrounding footage can absorb returns errorCode dialogue_edit_removal_too_large (422). When the failing section can be identified, `dialogueEditSection` on the error names it; change it and create a new preview before submitting again. Retrying the same preview fails again. A video input `url` that links to a single TikTok, Instagram, Facebook, or YouTube video is imported first: the generation is created PENDING and starts once the video is downloaded, or ends FAILED with errorCode import_failed if the import fails. A linked audio input, or a linked video in a segments or dubbing request, returns 409 import_in_progress until its import finishes; send the same request (with the same Idempotency-Key, if any) again after Retry-After. Link imports can also return 403 import_not_enabled, 422 import_failed, 429 import_daily_limit_reached or concurrency_limit_reached, and 503 import_unavailable. See [Asset Uploads](/docs/developer-guides/asset-uploads#import-a-social-video-link). Send the optional Idempotency-Key header on the first request and reuse it with the same payload on retries. An accepted replay returns 200 with the original generation's current state and Idempotency-Replayed: true. A retry after that generation ended FAILED or REJECTED starts a new generation instead (201). An API-key request without the header that is identical to one your organization sent in the last 60 seconds returns 409 DUPLICATE_SUBMISSION with the original generationId; send a unique Idempotency-Key with each generation you intend. See [Idempotent Requests](/docs/api-reference/guides/idempotency) for key validation, conflicts, retention, duplicates, and uncertain-outcome recovery.
 
         Parameters
         ----------
@@ -570,7 +883,7 @@ class AsyncGenerationsClient:
             name of the model to use for generation.
 
         input : typing.Sequence[Input]
-            Normal lipsync requests must include exactly one visual input (video or image) and one audio or text input. Dubbed lipsync requests using dubParams must include exactly one video input and no audio or text input, because Sync extracts the dubbing source audio from that video. Image inputs are only supported with the sync-3 model. When using segments, audio or text inputs can carry unique refId values.
+            Normal lipsync requests must include exactly one visual input (video or image) and one audio or text input. Dubbed lipsync requests using dubParams must include exactly one video input and no audio or text input, because Sync extracts the dubbing source audio from that video. Image inputs are only supported with the sync-3 model. When using segments, audio or text inputs can carry unique refId values. At most 102 inputs.
 
         idempotency_key : typing.Optional[str]
             Case-sensitive organization-scoped key, 1–128 characters matching [A-Za-z0-9._~-]+. Send exactly one header. Reuse the same key and payload for retries of one action; a retry after the generation ended FAILED or REJECTED starts a new one. Use a unique key per intended generation. Retained seven days from acceptance, longer while active or unresolved. Not a JSON field.
@@ -579,7 +892,7 @@ class AsyncGenerationsClient:
             additional options available for generation.
 
         segments : typing.Optional[typing.Sequence[GenerationSegment]]
-            segments definition list. When provided, allows defining one or more video segments with different audio inputs for each segment. Each segment specifies a time range and references an audio input by refId.
+            segments definition list. When provided, allows defining one or more video segments with different audio inputs for each segment. Each segment specifies a time range and references an audio input by refId. At most 100 segments.
 
         output_audio : typing.Optional[OutputAudio]
             One audio input that plays over the whole finished output from its first second, replacing the sound of every part, lipsynced or not. Use it with segments, for example one dubbed track for a whole video where some segments set lipsync to false. When any segment sets lipsync to false and this is omitted, the only audio input is used. Not available with a custom output bucket, zero data retention or a retention override.
@@ -597,7 +910,7 @@ class AsyncGenerationsClient:
             Optionally attach this generation to a project (created via POST /v2/projects) so it appears in Studio under that project. Must reference a project in your organization — otherwise the request is rejected with 422.
 
         dialogue_edit : typing.Optional[DialogueEditReference]
-            Use the id of a completed dialogue edit from POST /v2/dialogue-edits to supply the audio and edited regions. Requires a preview that ran segment lipsync and section expansion (see the job's segmentLipsyncEnabled and sectionExpansionEnabled). Send exactly one video input, the same video the dialogue edit was made from, and no audio input, segments or dubParams. Billing, status, wait and webhooks work as for any generation.
+            Use the id of a completed dialogue edit from POST /v2/dialogue-edits to supply the audio and edited regions. Requires a preview that ran segment lipsync and section expansion (see the job's segmentLipsyncEnabled and sectionExpansionEnabled). Send exactly one video input, the same video the dialogue edit was made from, and no audio input, segments or dubParams. Billing, status, wait and webhooks work as for any generation. Also accepted in batch rows for organizations with dialogue-edit batches enabled.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -670,7 +983,7 @@ class AsyncGenerationsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> Generation:
         """
-        The multipart/form-data form of `POST /v2/generate` — the same endpoint as "Create Generation", for uploading local files directly instead of passing URLs. Send each file under a field named for its type (`video`, `image`, `audio`), at most one of each. The application parser allows up to 5 GiB (5 × 1024³ bytes) per file, 3 files, 32 fields, 35 total parts, and 1 MiB per field. A file over the parser limit returns 413 generation_input_validation_failed, and a file over your plan limit returns 422 file_size_exceeds_plan_limit. Proxy limits may be lower; this ceiling does not guarantee a 5 GiB direct transfer. Each file is saved as an asset in your organization and passed to the generation by `assetId`. For large files, upload via POST /v2/assets/upload first and pass the `assetId`, so retries don't resend the file. Nested fields such as `input`, `options`, `segments`, `outputAudio`, `dubParams`, and `dialogueEdit` must be sent as JSON strings in multipart requests. Image inputs are sync-3 only. If a `text` input requires speech synthesis and the ElevenLabs provider is temporarily unavailable, the request returns errorCode elevenlabs_service_unavailable: 504 for provider timeouts and 503 for other provider outages for unkeyed requests. Keyed uncertain outcomes return 503 IDEMPOTENCY_OUTCOME_UNKNOWN instead. An API-key request that passes dialogueEdit is refused with errorCode dialogue_edit_retime_required (422) when the organization's rollout lacks segment lipsync and section expansion. A dialogueEdit that removes more speech than the surrounding footage can absorb returns errorCode dialogue_edit_removal_too_large (422). When the failing section can be identified, `dialogueEditSection` on the error names it; change it and create a new preview before submitting again. Retrying the same preview fails again. Send the optional Idempotency-Key header on the first request and reuse it with the same payload on retries. An accepted replay returns 200 with the original generation's current state and Idempotency-Replayed: true. A retry after that generation ended FAILED or REJECTED starts a new generation instead (201). An API-key request without the header that is identical to one your organization sent in the last 60 seconds returns 409 DUPLICATE_SUBMISSION with the original generationId; send a unique Idempotency-Key with each generation you intend. See [Idempotent Requests](/api-reference/guides/idempotency) for key validation, conflicts, retention, duplicates, and uncertain-outcome recovery.
+        The multipart/form-data form of `POST /v2/generate` — the same endpoint as "Create Generation", for uploading local files directly instead of passing URLs. Send each file under a field named for its type (`video`, `image`, `audio`), at most one of each. The application parser allows up to 5 GiB (5 × 1024³ bytes) per file, 3 files, 32 fields, 35 total parts, and 1 MiB per field. A file over the parser limit returns 413 generation_input_validation_failed, and a file over your plan limit returns 422 file_size_exceeds_plan_limit. A malformed or truncated multipart body, an unsupported file field, or too many fields or parts returns 400 generation_input_validation_failed. Let your HTTP client build the multipart boundaries and send only the documented fields. Proxy limits may be lower; this ceiling does not guarantee a 5 GiB direct transfer. Each file is saved as an asset in your organization and passed to the generation by `assetId`. For large files, upload via POST /v2/assets/upload first and pass the `assetId`, so retries don't resend the file. Nested fields such as `input`, `options`, `segments`, `outputAudio`, `dubParams`, and `dialogueEdit` must be sent as JSON strings in multipart requests. Image inputs are sync-3 only. If a `text` input requires speech synthesis and the ElevenLabs provider is temporarily unavailable, the request returns errorCode elevenlabs_service_unavailable: 504 for provider timeouts and 503 for other provider outages for unkeyed requests. Keyed uncertain outcomes return 503 IDEMPOTENCY_OUTCOME_UNKNOWN instead. An older dialogueEdit preview without segment lipsync and section expansion returns dialogue_edit_retime_required (422). Create a new preview from the same transcript and edits. A dialogueEdit that removes more speech than the surrounding footage can absorb returns errorCode dialogue_edit_removal_too_large (422). When the failing section can be identified, `dialogueEditSection` on the error names it; change it and create a new preview before submitting again. Retrying the same preview fails again. Send the optional Idempotency-Key header on the first request and reuse it with the same payload on retries. An accepted replay returns 200 with the original generation's current state and Idempotency-Replayed: true. A retry after that generation ended FAILED or REJECTED starts a new generation instead (201). An API-key request without the header that is identical to one your organization sent in the last 60 seconds returns 409 DUPLICATE_SUBMISSION with the original generationId; send a unique Idempotency-Key with each generation you intend. See [Idempotent Requests](/docs/api-reference/guides/idempotency) for key validation, conflicts, retention, duplicates, and uncertain-outcome recovery.
 
         Parameters
         ----------
@@ -692,7 +1005,7 @@ class AsyncGenerationsClient:
             Optional generation options, encoded as a JSON string in multipart requests.
 
         segments : typing.Optional[typing.List[GenerationSegment]]
-            Optional segment definitions, encoded as a JSON string in multipart requests.
+            Optional segment definitions, encoded as a JSON string in multipart requests. Each audioInput.refId must name an audio or text input sent in input by url, assetId, or text. An uploaded audio file has no refId, so segments can't reference it.
 
         output_audio : typing.Optional[OutputAudio]
             Optional audio input that plays over the whole finished output, encoded as a JSON string in multipart requests, for example `{"refId":"dub"}`. Use with segments. The refId must name an audio input sent by url or assetId: an uploaded audio file has no refId.
@@ -772,13 +1085,13 @@ class AsyncGenerationsClient:
         id : GenerationId
 
         wait : typing.Optional[bool]
-            When true, long-poll: hold the request open until the generation reaches a terminal status (COMPLETED/FAILED/REJECTED) or the timeout elapses, then return the latest state. Waits are short (10s max) — treat this as a convenience for jobs about to finish, and poll again (the response includes a `Retry-After: 2` header) or use a webhook for longer jobs. wait=true responses also carry `X-Sync-Wait-Mode: long_poll` and `X-Sync-Wait-Timeout-Seconds` headers. Cannot be combined with include=progress.
+            When true, long-poll: hold the request open until the generation reaches a terminal status (COMPLETED/NO_OP/FAILED/REJECTED) or the timeout elapses, then return the latest state. Waits are short (10s max) — treat this as a convenience for jobs about to finish, and poll again (the response includes a `Retry-After: 2` header) or use a webhook for longer jobs. wait=true responses also carry `X-Sync-Wait-Mode: long_poll` and `X-Sync-Wait-Timeout-Seconds` headers. Cannot be combined with include=progress.
 
         timeout : typing.Optional[float]
             Max seconds to hold a wait=true request open (default 5, max 10 — values outside 1-10 are rejected with a 400). On timeout the current (non-terminal) generation is returned with HTTP 200, so check `status` and poll again, or use a webhook for long jobs.
 
         include : typing.Optional[str]
-            Comma-separated extra fields to include. include=progress adds a progress_percent field (fetched live from the inference service).
+            Comma-separated extra fields to include. include=progress adds a `progress` object with the render stage, measured progress and the expected finish time. Works for generations created through the API as well as in sync's own apps.
 
         request_options : typing.Optional[RequestOptions]
             Request-specific configuration.
@@ -843,18 +1156,12 @@ class AsyncGenerationsClient:
         as v2 Creator and v3 Starter or higher) receive the clean output when
         available. Historical outputs can have the watermark burned in, so an
         upgrade does not guarantee every old output becomes watermark-free.
-        Outputs created without a watermark can remain clean after a downgrade.
-        If no watermarked derivative exists, the resolver retains its existing
-        fallback to the original output; changing plans does not rewrite files.
+        Changing plans does not rewrite historical files.
         This endpoint does not generate a new render or remove burned-in watermarks.
         
-        Signed S3 URLs request seven-day validity, but credential expiry,
-        revocation, access changes, or file deletion can make them unusable
-        sooner. Request this endpoint again for a fresh signed URL while the
-        output is still available. The selected S3 file is checked before
-        signing; a successful response does not guarantee future availability.
-        Older URL-only records return their stored URL unchanged, without
-        checking its availability or extending its original expiration.
+        Signed URLs can expire or become unavailable before their nominal
+        validity. Request this endpoint again for a fresh URL while the output
+        is still available.
         These URLs are download credentials: keep them private.
         
         Errors use the standard JSON error body and stable `errorCode`:
@@ -867,7 +1174,7 @@ class AsyncGenerationsClient:
         | 404 | `generation_output_unavailable` | No eligible output reference or the selected file is missing; contact support. |
         | 409 | `generation_not_ready` | Pending or processing; poll Get Generation until COMPLETED. |
         | 422 | `generation_not_downloadable` | Failed or rejected; inspect the generation error. |
-        | 503 | `generation_download_unavailable` | Storage lookup or signing failed; retry with backoff. |
+        | 503 | `generation_download_unavailable` | The download URL could not be prepared; retry with backoff. |
         
         Authentication also returns 422 for draft organizations. Requesting a
         download URL does not create a project, incur a generation charge, or
@@ -927,6 +1234,8 @@ class AsyncGenerationsClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> typing.List[Generation]:
         """
+        list sync. labs generations and filter jobs by status or generation id. review authentication, request parameters, response objects, and api errors.
+
         Parameters
         ----------
         status : typing.Optional[typing.Sequence[GenerationStatus]]
@@ -1005,7 +1314,7 @@ class AsyncGenerationsClient:
             Finite, positive billable duration in seconds.
 
         fps : typing.Optional[float]
-            Source video frame rate. When omitted, credit-billed organizations are quoted at 25, the rate generation admission holds credits at when the source frame rate cannot be read; other organizations at 30.
+            Finite, positive source video frame rate. For standard plans, defaults to 25 for credit billing and 30 for usage billing when omitted.
 
         workflow : typing.Optional[EstimateWorkflow]
             Omit for lip-sync only. `translate-and-dub` includes dubbing and lip-sync, estimated using the source duration. Actual output duration may differ.

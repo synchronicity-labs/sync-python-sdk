@@ -4,8 +4,9 @@ from ...core.unchecked_base_model import UncheckedBaseModel
 import typing
 import typing_extensions
 from ...core.serialization import FieldMetadata
-from ...core.pydantic_utilities import IS_PYDANTIC_V2
+from .project_generation_error_reason import ProjectGenerationErrorReason
 import pydantic
+from ...core.pydantic_utilities import IS_PYDANTIC_V2
 
 
 class ProjectGenerationError(UncheckedBaseModel):
@@ -13,6 +14,10 @@ class ProjectGenerationError(UncheckedBaseModel):
     message: str
     error_code: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="errorCode")] = None
     docs_link: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="docsLink")] = None
+    reason: typing.Optional[ProjectGenerationErrorReason] = pydantic.Field(default=None)
+    """
+    Why processing failed, when known. A shorter or smaller input may succeed after out_of_memory.
+    """
 
     if IS_PYDANTIC_V2:
         model_config: typing.ClassVar[pydantic.ConfigDict] = pydantic.ConfigDict(extra="allow", frozen=True)  # type: ignore # Pydantic v2

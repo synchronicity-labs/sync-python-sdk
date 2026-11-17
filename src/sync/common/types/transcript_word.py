@@ -4,8 +4,8 @@ from ...core.unchecked_base_model import UncheckedBaseModel
 import pydantic
 import typing_extensions
 from ...core.serialization import FieldMetadata
-from ...core.pydantic_utilities import IS_PYDANTIC_V2
 import typing
+from ...core.pydantic_utilities import IS_PYDANTIC_V2
 
 
 class TranscriptWord(UncheckedBaseModel):
@@ -31,6 +31,18 @@ class TranscriptWord(UncheckedBaseModel):
     end_ms: typing_extensions.Annotated[int, FieldMetadata(alias="endMs")] = pydantic.Field()
     """
     End of the word, in milliseconds from the start of the source.
+    """
+
+    confidence: typing.Optional[float] = pydantic.Field(default=None)
+    """
+    Speech recognition confidence in the word text, from 0 to 1. Says nothing about the speaker. Absent when the provider reported none. Returned by GET /v2/transcriptions/{id} and ignored when sent to POST /v2/dialogue-edits.
+    """
+
+    speaker_id: typing_extensions.Annotated[typing.Optional[str], FieldMetadata(alias="speakerId")] = pydantic.Field(
+        default=None
+    )
+    """
+    Speaker ID from the transcript speakers list. Null when unknown; absent on older transcripts.
     """
 
     if IS_PYDANTIC_V2:

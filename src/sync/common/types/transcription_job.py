@@ -11,6 +11,7 @@ from .transcript import Transcript
 from .transcription_difficulty import TranscriptionDifficulty
 from .transcription_error import TranscriptionError
 import datetime as dt
+from .transcription_job_estimate import TranscriptionJobEstimate
 from ...core.pydantic_utilities import IS_PYDANTIC_V2
 
 
@@ -45,7 +46,7 @@ class TranscriptionJob(UncheckedBaseModel):
         pydantic.Field(default=None)
     )
     """
-    End of the transcribed window, in source milliseconds. Null when the job transcribes to the end of the source.
+    End of the transcribed window, in source milliseconds. A requested end past the end of the source reads as the source's end when the source could be measured at creation. Null when the job transcribes to the end of the source.
     """
 
     transcript: typing.Optional[Transcript] = pydantic.Field(default=None)
@@ -92,6 +93,18 @@ class TranscriptionJob(UncheckedBaseModel):
     revision: typing.Optional[str] = pydantic.Field(default=None)
     """
     Content hash of the source and transcript this job produced. Present once the job has a transcript.
+    """
+
+    estimate: typing.Optional[TranscriptionJobEstimate] = pydantic.Field(default=None)
+    """
+    Expected completion time while the transcription is running. Null when the job is terminal or no estimate is available.
+    """
+
+    retry_after_ms: typing_extensions.Annotated[typing.Optional[int], FieldMetadata(alias="retryAfterMs")] = (
+        pydantic.Field(default=None)
+    )
+    """
+    Milliseconds to wait before polling this job again, between 1,000 and 5,000. Present only while the job is `PENDING` or `PROCESSING`.
     """
 
     if IS_PYDANTIC_V2:

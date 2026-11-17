@@ -25,7 +25,7 @@ class CreateAssetUploadRequest(UncheckedBaseModel):
 
     size: int = pydantic.Field()
     """
-    The size of the file in bytes. Single uploads are capped at 5GB.
+    The size of the file in bytes. Single uploads are capped at 5 GiB (5,368,709,120 bytes).
     """
 
     if IS_PYDANTIC_V2:

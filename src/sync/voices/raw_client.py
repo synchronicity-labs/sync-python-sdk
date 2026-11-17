@@ -14,16 +14,16 @@ from json.decoder import JSONDecodeError
 from ..core.api_error import ApiError
 from ..core.jsonable_encoder import jsonable_encoder
 from ..common.errors.not_found_error import NotFoundError
+from ..common.errors.conflict_error import ConflictError
+from ..common.errors.service_unavailable_error import ServiceUnavailableError
 from ..common.types.cloned_voice_response import ClonedVoiceResponse
 from ..common.errors.bad_request_error import BadRequestError
 from ..common.errors.payment_required_error import PaymentRequiredError
 from ..common.errors.forbidden_error import ForbiddenError
-from ..common.errors.conflict_error import ConflictError
 from ..common.errors.payload_too_large_error import PayloadTooLargeError
 from ..common.errors.unprocessable_entity_error import UnprocessableEntityError
 from ..common.errors.voice_clone_too_many_requests_error import VoiceCloneTooManyRequestsError
 from ..common.types.voice_clone_rate_limit_error import VoiceCloneRateLimitError
-from ..common.errors.service_unavailable_error import ServiceUnavailableError
 from ..core.client_wrapper import AsyncClientWrapper
 from ..core.http_response import AsyncHttpResponse
 
@@ -42,7 +42,7 @@ class RawVoicesClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[typing.List[Voice]]:
         """
-        List the voices available to your organization — built-in ElevenLabs voices plus any you have cloned. Use a voice's id as voiceId in POST /v2/tts and in generation text inputs. A voice that carries a `restriction` cannot currently synthesize speech — check `restriction` and choose another voice. Voice availability can change over time, so re-check it rather than assuming a voice stays usable.
+        List the voices available to your organization — built-in ElevenLabs voices plus any you have cloned. Use a voice's id as voiceId in POST /v2/tts and in generation text inputs. A voice that carries a `restriction` cannot currently synthesize speech — check `restriction` and choose another voice. Voice availability can change over time, so re-check it rather than assuming a voice stays usable. During a provider outage, x-sync-voices-stale: true indicates the last complete list, up to 24 hours old. Retry later for current voices.
 
         Parameters
         ----------
@@ -108,7 +108,7 @@ class RawVoicesClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[Voice]:
         """
-        Retrieve a single voice by the same id values GET /v2/voices exposes — a built-in ElevenLabs voice id or the UUID of a voice cloned by your organization. A missing or foreign-organization id returns a 404 with errorCode voice_not_found.
+        Retrieve a single voice by the same id values GET /v2/voices exposes — a built-in ElevenLabs voice id or the UUID of a voice cloned by your organization. A missing or foreign-organization id returns a 404 with errorCode voice_not_found. During a provider outage, a saved voice can be returned with x-sync-voices-stale: true. An ID absent from that saved list returns 503 rather than 404; retry after recovery. A pending clone returns 409 voice_clone_pending. Poll this GET until 200 (ready) or 404 (no voice was created); do not submit another clone while it is pending.
 
         Parameters
         ----------
@@ -164,6 +164,26 @@ class RawVoicesClient:
                         ),
                     )
                 )
+            if _response.status_code == 409:
+                raise ConflictError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 503:
+                raise ServiceUnavailableError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
             if _response.status_code == 500:
                 raise InternalServerError(
                     typing.cast(
@@ -190,11 +210,11 @@ class RawVoicesClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> HttpResponse[ClonedVoiceResponse]:
         """
-        Clone a custom voice from an audio or video sample and get back its id for use in POST /v2/tts and generation text inputs.
+        Clone a custom voice from an audio or video sample and get back its id for use in POST /v2/tts and generation text inputs. Provide exactly one sample source: url, assetId, or sampleUrls with 1–10 hosted URLs.
 
-        The exact sequence for a local file: (1) request a presigned URL via POST /v2/assets/upload, (2) PUT the file bytes to the returned uploadUrl, (3) clone from the returned url (or register it via POST /v2/assets and clone from the assetId). Samples must be hosted in sync. labs storage — external URLs are rejected with errorCode voice_sample_upload_required. Video sources have their audio track extracted automatically (first 2 minutes). Video sources staged for extraction are limited to 1 GiB (1,073,741,824 bytes); larger sources return 413 voice_sample_source_too_large. This endpoint allows 10 requests per hour per API key (or per signed-in user).
+        The exact sequence for a local file: (1) request a presigned URL via POST /v2/assets/upload, (2) PUT the file bytes to the returned uploadUrl, (3) clone from the returned url (or register it via POST /v2/assets and clone from the assetId). Samples must be hosted in sync. labs storage — external URLs are rejected with errorCode voice_sample_upload_required. Video sources have their audio track extracted automatically (first 2 minutes). Video sources staged for extraction are limited to 1 GiB (1,073,741,824 bytes); larger sources return 413 voice_sample_source_too_large. This endpoint allows 10 requests per hour per API key (or per signed-in user). Audio samples are limited to 10 MiB (10,485,760 bytes), or 50 MiB (52,428,800 bytes) when you connect your own ElevenLabs API key.
 
-        For best results use 30 seconds to 2 minutes of clear, single-speaker speech without background music or noise. Samples that are too short are rejected with errorCode voice_sample_too_short. Clone slots are limited per plan (403 voice_clone_limit_reached) and voice names must be unique within your organization (409 voice_name_conflict). Sample source problems return 422 (voice_sample_not_accessible, voice_sample_type_unsupported, voice_sample_upload_required, voice_sample_extraction_failed); invalid or too-short samples return 400 (voice_sample_invalid, voice_sample_too_short). A 429 may mean the request-rate limit was exceeded or shared provider capacity is busy (voice_clone_busy); follow the response retry guidance. Provider outages return 503 (elevenlabs_service_unavailable).
+        For best results use 30 seconds to 2 minutes of clear, single-speaker speech without background music or noise. Samples that are too short are rejected with errorCode voice_sample_too_short. Clone slots are limited per plan (403 voice_clone_limit_reached) and voice names must be unique within your organization (409 voice_name_conflict). An uncertain clone returns 409 voice_clone_pending with voiceId. Poll GET /v2/voices/{voiceId} until 200 or 404 instead of submitting another clone. Sample source problems return 422 (voice_sample_not_accessible, voice_sample_type_unsupported, voice_sample_upload_required, voice_sample_extraction_failed); invalid or too-short samples return 400 (voice_sample_invalid, voice_sample_too_short). A 429 may mean the request-rate limit was exceeded or shared provider capacity is busy (voice_clone_busy); follow the response retry guidance. Provider outages return 503 (elevenlabs_service_unavailable).
 
         Parameters
         ----------
@@ -351,7 +371,7 @@ class RawVoicesClient:
 
     def delete(self, id: str, *, request_options: typing.Optional[RequestOptions] = None) -> HttpResponse[bool]:
         """
-        Delete a cloned voice, freeing a clone slot. Unknown ids return 404 with errorCode `voice_not_found`.
+        Delete a cloned voice, freeing a clone slot. Unknown ids return 404 with errorCode `voice_not_found`. Deletion returns 409 while a clone is still processing. If it returns 503, the voice is retained; retry after the provider recovers.
 
         Parameters
         ----------
@@ -401,6 +421,26 @@ class RawVoicesClient:
                         ),
                     )
                 )
+            if _response.status_code == 409:
+                raise ConflictError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 503:
+                raise ServiceUnavailableError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
             if _response.status_code == 500:
                 raise InternalServerError(
                     typing.cast(
@@ -428,7 +468,7 @@ class AsyncRawVoicesClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[typing.List[Voice]]:
         """
-        List the voices available to your organization — built-in ElevenLabs voices plus any you have cloned. Use a voice's id as voiceId in POST /v2/tts and in generation text inputs. A voice that carries a `restriction` cannot currently synthesize speech — check `restriction` and choose another voice. Voice availability can change over time, so re-check it rather than assuming a voice stays usable.
+        List the voices available to your organization — built-in ElevenLabs voices plus any you have cloned. Use a voice's id as voiceId in POST /v2/tts and in generation text inputs. A voice that carries a `restriction` cannot currently synthesize speech — check `restriction` and choose another voice. Voice availability can change over time, so re-check it rather than assuming a voice stays usable. During a provider outage, x-sync-voices-stale: true indicates the last complete list, up to 24 hours old. Retry later for current voices.
 
         Parameters
         ----------
@@ -494,7 +534,7 @@ class AsyncRawVoicesClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[Voice]:
         """
-        Retrieve a single voice by the same id values GET /v2/voices exposes — a built-in ElevenLabs voice id or the UUID of a voice cloned by your organization. A missing or foreign-organization id returns a 404 with errorCode voice_not_found.
+        Retrieve a single voice by the same id values GET /v2/voices exposes — a built-in ElevenLabs voice id or the UUID of a voice cloned by your organization. A missing or foreign-organization id returns a 404 with errorCode voice_not_found. During a provider outage, a saved voice can be returned with x-sync-voices-stale: true. An ID absent from that saved list returns 503 rather than 404; retry after recovery. A pending clone returns 409 voice_clone_pending. Poll this GET until 200 (ready) or 404 (no voice was created); do not submit another clone while it is pending.
 
         Parameters
         ----------
@@ -550,6 +590,26 @@ class AsyncRawVoicesClient:
                         ),
                     )
                 )
+            if _response.status_code == 409:
+                raise ConflictError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 503:
+                raise ServiceUnavailableError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
             if _response.status_code == 500:
                 raise InternalServerError(
                     typing.cast(
@@ -576,11 +636,11 @@ class AsyncRawVoicesClient:
         request_options: typing.Optional[RequestOptions] = None,
     ) -> AsyncHttpResponse[ClonedVoiceResponse]:
         """
-        Clone a custom voice from an audio or video sample and get back its id for use in POST /v2/tts and generation text inputs.
+        Clone a custom voice from an audio or video sample and get back its id for use in POST /v2/tts and generation text inputs. Provide exactly one sample source: url, assetId, or sampleUrls with 1–10 hosted URLs.
 
-        The exact sequence for a local file: (1) request a presigned URL via POST /v2/assets/upload, (2) PUT the file bytes to the returned uploadUrl, (3) clone from the returned url (or register it via POST /v2/assets and clone from the assetId). Samples must be hosted in sync. labs storage — external URLs are rejected with errorCode voice_sample_upload_required. Video sources have their audio track extracted automatically (first 2 minutes). Video sources staged for extraction are limited to 1 GiB (1,073,741,824 bytes); larger sources return 413 voice_sample_source_too_large. This endpoint allows 10 requests per hour per API key (or per signed-in user).
+        The exact sequence for a local file: (1) request a presigned URL via POST /v2/assets/upload, (2) PUT the file bytes to the returned uploadUrl, (3) clone from the returned url (or register it via POST /v2/assets and clone from the assetId). Samples must be hosted in sync. labs storage — external URLs are rejected with errorCode voice_sample_upload_required. Video sources have their audio track extracted automatically (first 2 minutes). Video sources staged for extraction are limited to 1 GiB (1,073,741,824 bytes); larger sources return 413 voice_sample_source_too_large. This endpoint allows 10 requests per hour per API key (or per signed-in user). Audio samples are limited to 10 MiB (10,485,760 bytes), or 50 MiB (52,428,800 bytes) when you connect your own ElevenLabs API key.
 
-        For best results use 30 seconds to 2 minutes of clear, single-speaker speech without background music or noise. Samples that are too short are rejected with errorCode voice_sample_too_short. Clone slots are limited per plan (403 voice_clone_limit_reached) and voice names must be unique within your organization (409 voice_name_conflict). Sample source problems return 422 (voice_sample_not_accessible, voice_sample_type_unsupported, voice_sample_upload_required, voice_sample_extraction_failed); invalid or too-short samples return 400 (voice_sample_invalid, voice_sample_too_short). A 429 may mean the request-rate limit was exceeded or shared provider capacity is busy (voice_clone_busy); follow the response retry guidance. Provider outages return 503 (elevenlabs_service_unavailable).
+        For best results use 30 seconds to 2 minutes of clear, single-speaker speech without background music or noise. Samples that are too short are rejected with errorCode voice_sample_too_short. Clone slots are limited per plan (403 voice_clone_limit_reached) and voice names must be unique within your organization (409 voice_name_conflict). An uncertain clone returns 409 voice_clone_pending with voiceId. Poll GET /v2/voices/{voiceId} until 200 or 404 instead of submitting another clone. Sample source problems return 422 (voice_sample_not_accessible, voice_sample_type_unsupported, voice_sample_upload_required, voice_sample_extraction_failed); invalid or too-short samples return 400 (voice_sample_invalid, voice_sample_too_short). A 429 may mean the request-rate limit was exceeded or shared provider capacity is busy (voice_clone_busy); follow the response retry guidance. Provider outages return 503 (elevenlabs_service_unavailable).
 
         Parameters
         ----------
@@ -739,7 +799,7 @@ class AsyncRawVoicesClient:
         self, id: str, *, request_options: typing.Optional[RequestOptions] = None
     ) -> AsyncHttpResponse[bool]:
         """
-        Delete a cloned voice, freeing a clone slot. Unknown ids return 404 with errorCode `voice_not_found`.
+        Delete a cloned voice, freeing a clone slot. Unknown ids return 404 with errorCode `voice_not_found`. Deletion returns 409 while a clone is still processing. If it returns 503, the voice is retained; retry after the provider recovers.
 
         Parameters
         ----------
@@ -781,6 +841,26 @@ class AsyncRawVoicesClient:
                 )
             if _response.status_code == 404:
                 raise NotFoundError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 409:
+                raise ConflictError(
+                    typing.cast(
+                        GenerationError,
+                        construct_type(
+                            type_=GenerationError,  # type: ignore
+                            object_=_response.json(),
+                        ),
+                    )
+                )
+            if _response.status_code == 503:
+                raise ServiceUnavailableError(
                     typing.cast(
                         GenerationError,
                         construct_type(
